@@ -1,0 +1,26 @@
+[requires]
+qt/6.10.1
+
+[options]
+qt/*:qtshadertools=True
+qt/*:qtsvg=True
+qt/*:qtcharts=True
+qt/*:disabled_features="linguist"
+#qt/*:with_md4c=False
+#qt/*:with_odbc=False
+# pcre2 is actually required by qt (QTBUG-92454). please use option qt:with_pcre2=True
+#qt/*:with_pcre2=True
+#qt/*:with_brotli=False
+#qt/*:with_libpng=False
+#qt/*:with_sqlite3=False
+#qt/*:with_freetype=False
+#qt/*:with_harfbuzz=False
+#qt/*:with_fontconfig=False
+qt/*:with_pq=False
+qt/*:shared=True
+
+#[settings]
+qt/*:build.tools:cxxflags="['QT_NO_INT128']"
+
+[generators]
+CMakeDeps

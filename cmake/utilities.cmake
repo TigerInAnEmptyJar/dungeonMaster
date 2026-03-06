@@ -1,0 +1,121 @@
+function(my_add_library _NAME)
+  set(flags "INTERFACE;STATIC;AUTORCC;AUTOMOC;AUTOUIC")
+  set(single "ALIAS")
+  set(multi "HEADER;SOURCE;RESOURCE;DEPENDS;INCLUDES;DEFINES")
+  cmake_parse_arguments(A ${flags} ${single} ${multi} ${ARGN})
+  message(STATUS "Adding library ${_NAME} (alias: ${A_ALIAS})")
+  if(${A_INTERFACE})
+    add_library(${_NAME} INTERFACE ${A_HEADER})
+  else()
+    if(${A_STATIC})
+      add_library(${_NAME} STATIC ${A_HEADER} ${A_SOURCE} ${A_RESOURCE})
+    else()
+      add_library(${_NAME} ${A_HEADER} ${A_SOURCE} ${A_RESOURCE})
+    endif()
+  endif()
+
+  if (A_DEPENDS)
+    target_link_libraries(${_NAME} ${A_DEPENDS})
+  endif()
+
+  if (A_INCLUDES)
+    target_include_directories(${_NAME} ${A_INCLUDES})
+  endif()
+
+  if (A_DEFINES)
+    target_compile_definitions(${_NAME} ${A_DEFINES})
+  endif()
+
+  if (A_AUTORCC)
+    set_target_properties(${_NAME} PROPERTIES AUTORCC ON)
+  endif()
+  if (A_AUTOMOC)
+    set_target_properties(${_NAME} PROPERTIES AUTOMOC ON)
+  endif()
+  if (A_AUTOUIC)
+    set_target_properties(${_NAME} PROPERTIES AUTOUIC ON)
+  endif()
+
+  if (A_ALIAS)
+    add_library(${A_ALIAS} ALIAS ${_NAME})
+  endif()
+endfunction()
+
+function(my_add_executable _NAME)
+  set(flags "AUTORCC;AUTOMOC;AUTOUIC;INSTALL")
+  set(single "")
+  set(multi "HEADER;SOURCE;RESOURCE;DEPENDS;INCLUDES;DEFINES")
+  cmake_parse_arguments(A ${flags} ${single} ${multi} ${ARGN})
+  message(STATUS "Adding executable ${_NAME}")
+  add_executable(${_NAME} ${A_HEADER} ${A_SOURCE} ${A_RESOURCE})
+
+  if (A_DEPENDS)
+    target_link_libraries(${_NAME} ${A_DEPENDS})
+  endif()
+
+  if (A_INCLUDES)
+    target_include_directories(${_NAME} ${A_INCLUDES})
+  endif()
+
+  if (A_DEFINES)
+    target_compile_definitions(${_NAME} ${A_DEFINES})
+  endif()
+
+  if (A_AUTORCC)
+    set_target_properties(${_NAME} PROPERTIES AUTORCC ON)
+  endif()
+  if (A_AUTOMOC)
+    set_target_properties(${_NAME} PROPERTIES AUTOMOC ON)
+  endif()
+  if (A_AUTOUIC)
+    set_target_properties(${_NAME} PROPERTIES AUTOUIC ON)
+  endif()
+  if (A_INSTALL)
+    install(TARGET ${NAME})
+  endif()
+
+  set_target_properties(${_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/)
+
+endfunction()
+
+find_package(GTest REQUIRED)
+include(GoogleTest)
+
+function(my_add_test _NAME)
+  set(flags "AUTORCC;AUTOMOC;AUTOUIC")
+  set(single "")
+  set(multi "HEADER;SOURCE;RESOURCE;DEPENDS;INCLUDES;DEFINES")
+  cmake_parse_arguments(A ${flags} ${single} ${multi} ${ARGN})
+  message(STATUS "Adding tests ${_NAME}")
+  add_executable(${_NAME} ${A_HEADER} ${A_SOURCE})
+
+  if (A_DEPENDS)
+    target_link_libraries(${_NAME} ${A_DEPENDS})
+  endif()
+
+  if (A_INCLUDES)
+    target_include_directories(${_NAME} ${A_INCLUDES})
+  endif()
+
+  if (A_DEFINES)
+    target_compile_definitions(${_NAME} ${A_DEFINES})
+  endif()
+
+  target_link_libraries(${_NAME} GTest::Main GTest::gmock)
+
+  if (A_AUTORCC)
+    set_target_properties(${_NAME} PROPERTIES AUTORCC ON)
+  endif()
+  if (A_AUTOMOC)
+    set_target_properties(${_NAME} PROPERTIES AUTOMOC ON)
+  endif()
+  if (A_AUTOUIC)
+    set_target_properties(${_NAME} PROPERTIES AUTOUIC ON)
+  endif()
+
+  set_target_properties(${_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests/)
+
+  gtest_add_tests(TARGET ${_NAME}
+                  SOURCES ${A_SOURCE}
+  )
+endfunction()
