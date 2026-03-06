@@ -1,0 +1,71 @@
+@startuml Context_Diagram
+title "Container diagram Mobile: Dungeon Master"
+
+package DMSystem {
+  component DataModel as systemdatamodel
+  component IO as systemio 
+  component Displays as systemDisplay
+  component WebRead as systemWebcomRead
+  systemio --> systemdatamodel
+  systemDisplay --> systemdatamodel
+  systemWebcomRead --> systemdatamodel
+  systemWebcomRead --> systemio
+}
+package Adventure {
+  component DataModel
+  component IO
+  component WebWrite as AdventureWebWrite
+  component WebRead as AdventureWebRead
+  component Displays as AdventureDisplays
+  IO --> DataModel
+  AdventureWebRead --> DataModel
+  AdventureWebWrite --> DataModel
+  AdventureWebRead --> IO
+  AdventureWebWrite --> IO
+  AdventureDisplays --> DataModel
+}
+
+DataModel --> systemdatamodel
+
+package Gaming {
+  component DataModel as gamingDataModel
+  component IO as gamingIO
+  component Gui as gamingGui
+  component Web as gamingWeb
+  gamingIO --> gamingDataModel
+  gamingGui --> gamingDataModel
+  gamingWeb --> gamingDataModel
+}
+
+node "Dungeon Master\nDM" as dm_dm
+
+dm_dm --> AdventureWebRead
+dm_dm --> AdventureWebWrite
+dm_dm --> systemDisplay
+dm_dm --> gamingGui
+dm_dm --> gamingIO
+dm_dm --> gamingWeb
+
+node "Dungeon Master\nPlayer" as dm_player
+dm_player --> AdventureWebRead
+dm_player --> AdventureDisplays
+dm_player --> systemDisplay
+dm_player --> systemWebcomRead
+dm_player --> gamingGui
+dm_player --> gamingIO
+dm_player --> gamingWeb
+
+package Webserver {
+  component Webserver as ws
+  interface read as webserverread
+  interface write as webserverwrite
+  ws -- webserverread
+  ws -- webserverwrite
+}
+
+webserverread --- AdventureWebRead
+webserverwrite --- AdventureWebWrite
+webserverread --- systemWebcomRead
+webserverread --- gamingWeb
+webserverwrite --- gamingWeb
+@enduml

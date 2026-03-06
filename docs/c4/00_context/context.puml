@@ -1,0 +1,25 @@
+@startuml Context_Diagram
+title "Context diagram: Dungeon Master"
+
+:Admin:
+actor "Dungeon-Master" as DM
+:Player:
+agent desktop
+agent mobile
+database Storage
+cloud Webserver
+
+Player --> mobile : "gaming"
+Player --> desktop : "preparation\ngaming"
+
+DM --> mobile : "gaming"
+DM --> desktop : "preparation\ngaming"
+
+Admin --> desktop : "manage system"
+
+desktop <--> Webserver
+mobile <--> Webserver
+
+Webserver --> Storage
+
+@enduml
