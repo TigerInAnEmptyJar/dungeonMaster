@@ -1,0 +1,6 @@
+add_subdirectory(adventure)
+add_subdirectory(desktop_app)
+add_subdirectory(gaming)
+add_subdirectory(mobile_app)
+add_subdirectory(system)
+#add_subdirectory(webserver)

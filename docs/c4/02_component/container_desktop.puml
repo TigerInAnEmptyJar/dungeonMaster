@@ -34,6 +34,7 @@ package Adventure {
 
 DataModel --> systemdatamodel
 AdventureEditors --> systemDisplay
+IO --> systemio
 
 package Gaming {
   component DataModel as gamingDataModel
@@ -44,6 +45,9 @@ package Gaming {
   gamingGui --> gamingDataModel
   gamingWeb --> gamingDataModel
 }
+
+gamingDataModel --> DataModel
+gamingIO --> IO
 
 node "Dungeon Master\nAdmin" as dm_admin
 

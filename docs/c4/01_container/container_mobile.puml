@@ -1,0 +1,29 @@
+@startuml Context_Diagram
+title "Container diagram Mobile: Dungeon Master"
+
+package "Master"{
+  node "Dungeon Master\nDM" as dm_dm
+  interface read as dm_read
+  interface write as dm_write
+  dm_dm -- dm_read
+  dm_dm -- dm_write
+}
+package Player{
+  node "Dungeon Master\nPlayer" as dm_player
+  interface read as player_read
+  interface write as player_write
+  dm_player -- player_read
+  dm_player -- player_write
+}
+package Webserver {
+  cloud Webserver as ws
+  interface read as webserverread
+  interface write as webserverwrite
+  webserverread -- ws
+  webserverwrite -- ws
+}
+webserverread .. dm_read
+webserverwrite .. dm_write
+webserverread .. player_read
+webserverwrite .. player_write
+@enduml
