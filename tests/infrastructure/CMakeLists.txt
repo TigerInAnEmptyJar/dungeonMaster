@@ -6,4 +6,5 @@ my_add_test(InfrastructureTests
   SOURCE
     treeItemTest.cpp
     objectRegistryTest.cpp
+    objectFactoryTest.cpp
 )

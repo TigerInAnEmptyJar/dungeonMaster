@@ -8,8 +8,10 @@ my_add_library(infrastructure
   HEADER
     include/treeItem.hpp
     include/objectRegistry.hpp
+    include/objectFactory.hpp
   SOURCE
     src/treeItem.cpp
     src/objectRegistry.cpp
+    src/objectFactory.cpp
   ALIAS DM::Infrastructure
 )

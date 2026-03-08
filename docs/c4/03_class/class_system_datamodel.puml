@@ -41,6 +41,22 @@ namespace infrastructure {
   }
 
   ObjectRegistry o-- "*" TreeItem
+
+  class ObjectFactory {
+  -- Management --
+  + install(typeId: uuid, creator: Creator): bool
+  + uninstall(typeId: uuid): bool
+  + isInstalled(typeId: uuid): bool
+  + installedCount(): int
+  + installedTypes(): uuid[]
+  -- Creation --
+  + create(typeId: uuid, objectId: uuid): TreeItem
+  + create(typeId: uuid): TreeItem
+  .. note ..
+  Creator = function<TreeItem(uuid)>
+  }
+
+  ObjectFactory ..> TreeItem : creates
 }
 
 class BaseObject {
@@ -244,22 +260,12 @@ class DependentModifier {
 Modifier <|-- DependentModifier
 DependentModifier o-- BaseObject
 
-class ObjectFactory {
--- Management --    
-+ install(id: uuid, creator: functor): bool
-+ uninstall(id: uuid): bool
-+ installedTypes(): uuid[]
--- Creation --
-+ create(uuid): BaseObject
-}
-
-ObjectFactory -- BaseObject : creates
-
 class ObjectResolver <template> {
 + id: uuid
 }
 
 BaseObject <|-- ObjectResolver
 ObjectResolver o-- infrastructure.ObjectRegistry
+ObjectResolver ..> infrastructure.ObjectFactory : uses
 
 @enduml
