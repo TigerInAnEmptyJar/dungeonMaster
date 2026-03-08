@@ -5,4 +5,5 @@ my_add_test(InfrastructureTests
     Qt6::Core
   SOURCE
     treeItemTest.cpp
+    objectRegistryTest.cpp
 )

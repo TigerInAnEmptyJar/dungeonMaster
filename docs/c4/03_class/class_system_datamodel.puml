@@ -27,6 +27,20 @@ namespace infrastructure {
   + subtreeChildAboutToBeRemoved(parent: TreeItem, index: int, child: TreeItem): void
   + subtreeChildRemoved(parent: TreeItem, index: int, child: TreeItem): void
   }
+
+  class ObjectRegistry {
+  -- Registration --
+  + registerObject(object: TreeItem): void
+  + unregisterObject(id: uuid): void
+  -- Lookup --
+  + findObject(id: uuid): weak_ptr<TreeItem>
+  + registeredCount(): int
+  .. note ..
+  does not own objects (weak_ptr)
+  auto-removes on QObject::destroyed
+  }
+
+  ObjectRegistry o-- "*" TreeItem
 }
 
 class BaseObject {
@@ -241,18 +255,11 @@ class ObjectFactory {
 
 ObjectFactory -- BaseObject : creates
 
-class ObjectRegistry {
-+ findObject(objectId: uuid): BaseObject
-+ registerObject(BaseObject: uuid): void
-+ unregisterObject(BaseObject: uuid): void
-}
-ObjectRegistry *-- "*" BaseObject 
-
 class ObjectResolver <template> {
 + id: uuid
 }
 
 BaseObject <|-- ObjectResolver
-ObjectResolver o-- ObjectRegistry
+ObjectResolver o-- infrastructure.ObjectRegistry
 
 @enduml

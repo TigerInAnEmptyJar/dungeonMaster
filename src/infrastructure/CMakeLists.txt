@@ -7,7 +7,9 @@ my_add_library(infrastructure
     PUBLIC Boost::headers
   HEADER
     include/treeItem.hpp
+    include/objectRegistry.hpp
   SOURCE
     src/treeItem.cpp
+    src/objectRegistry.cpp
   ALIAS DM::Infrastructure
 )
