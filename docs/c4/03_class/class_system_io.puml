@@ -3,39 +3,50 @@ title "Class Diagram System IO"
 
 hide <<DataModel>> members
 package DataModel {
-    class BaseObject <<DataModel>>
+    class TreeItem <<DataModel>>
     class ObjectFactory <<DataModel>>
 }
 
+namespace gurps_system {
+
 class Io {
-+ install(serializer: Serializer): bool
-+ uninstall(serializer: Serializer): bool
++ Io(factory: ObjectFactory&)
+-- Serializer management --
++ install(serializer: shared_ptr<Serializer>): bool
++ uninstall(id: uuid): bool
 + installedSerializers(): uuid[]
-+ serializer(id: uuid): Serializer
-+ serializer(filter: string): Serializer
-+ allFilters(): string[]
+-- Serializer lookup --
++ serializer(id: uuid): Serializer*
++ serializer(filter: string): Serializer*
++ allFilters(): QStringList
 }
 
-Io o-- ObjectFactory
+gurps_system.Io o-- DataModel.ObjectFactory
 
-abstract Serializer {
-{abstract}canRead(firstLine: string): bool
-{abstract}read(stream): BaseObject
-{abstract}write(stream): BaseObject
-{abstract}filters(): string[]
-{abstract}id(): uuid
-{abstract}provides(filter:string):bool
+abstract class Serializer {
++ Serializer()
+-- Identity --
++ {abstract} id(): uuid
+-- Capabilities --
++ {abstract} filters(): QStringList
++ {abstract} provides(filter: QString): bool
++ {abstract} canRead(firstLine: QByteArray): bool
+-- IO --
++ {abstract} read(stream: QIODevice, factory: ObjectFactory): shared_ptr<TreeItem>
++ {abstract} write(stream: QIODevice, obj: TreeItem): void
 }
-Io "*" *-- Serializer
-Serializer o-- ObjectFactory
+
+gurps_system.Io "1" *-- "*" gurps_system.Serializer
 
 class JsonSerializer
-Serializer <|-- JsonSerializer
+gurps_system.Serializer <|-- gurps_system.JsonSerializer
 
 class XmlSerializer
-Serializer <|-- XmlSerializer
+gurps_system.Serializer <|-- gurps_system.XmlSerializer
 
 class LatexSerializer
-Serializer <|-- LatexSerializer
+gurps_system.Serializer <|-- gurps_system.LatexSerializer
+
+}
 
 @enduml
