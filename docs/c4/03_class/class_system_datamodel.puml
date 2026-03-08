@@ -80,12 +80,23 @@ namespace infrastructure {
   ItemResolver ..> TreeItem : swapsChild
 }
 
-class BaseObject {
--- Properties --
-+ name : string
-+ description : string
+namespace dm {
+  class BaseObject {
+  -- Identity --
+  + {static} classId(): uuid
+  + typeId(): uuid
+  -- Properties --
+  + name: QString
+  + setName(name: QString): void
+  + description: QString
+  + setDescription(description: QString): void
+  -- Signals --
+  + nameChanged(name: QString): void
+  + descriptionChanged(description: QString): void
+  }
 }
-infrastructure.TreeItem <|-- BaseObject
+
+infrastructure.TreeItem <|-- dm.BaseObject
 
 enum Attribute {
     STRENGTH,
