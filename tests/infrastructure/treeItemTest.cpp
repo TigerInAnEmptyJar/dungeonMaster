@@ -3,6 +3,11 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <boost/uuid/nil_generator.hpp>
+#include <boost/uuid/random_generator.hpp>
+#include <boost/uuid/string_generator.hpp>
+#include <boost/uuid/uuid.hpp>
+
 #include <QCoreApplication>
 
 // ── Qt requires a QCoreApplication for signal/slot delivery ──────────────────
@@ -336,4 +341,67 @@ TEST_F(TreeItemTest, LocalSignalsNotFiredForSubtreeChanges)
   EXPECT_CALL(obs, onChildInserted(_, _)).Times(0);
 
   child1->insertChild(0, grandchild);
+}
+
+// ── Identity ────────────────────────────────────────────────────────────────────
+
+// Helper subclass to verify typeId() override pattern
+class ConcreteItem : public TreeItem
+{
+public:
+  using TreeItem::TreeItem;
+
+  static auto classId() -> boost::uuids::uuid
+  {
+    static boost::uuids::uuid const id =
+        boost::uuids::string_generator{}("b1234567-89ab-cdef-0123-456789abcdef");
+    return id;
+  }
+
+  auto typeId() const -> boost::uuids::uuid override { return ConcreteItem::classId(); }
+};
+
+TEST_F(TreeItemTest, ClassIdIsStable) { EXPECT_EQ(TreeItem::classId(), TreeItem::classId()); }
+
+TEST_F(TreeItemTest, ClassIdIsNonNil) { EXPECT_NE(TreeItem::classId(), boost::uuids::nil_uuid()); }
+
+TEST_F(TreeItemTest, TypeIdMatchesClassIdForBaseType)
+{
+  EXPECT_EQ(root->typeId(), TreeItem::classId());
+}
+
+TEST_F(TreeItemTest, DefaultConstructorGeneratesNonNilObjectId)
+{
+  EXPECT_NE(root->objectId(), boost::uuids::nil_uuid());
+}
+
+TEST_F(TreeItemTest, TwoInstancesHaveDifferentObjectIds)
+{
+  EXPECT_NE(root->objectId(), child1->objectId());
+}
+
+TEST_F(TreeItemTest, ExplicitObjectIdIsPreserved)
+{
+  auto const id = boost::uuids::random_generator{}();
+  auto item = std::make_shared<TreeItem>(id);
+  EXPECT_EQ(item->objectId(), id);
+}
+
+TEST_F(TreeItemTest, ObjectIdIsStableAcrossCalls)
+{
+  auto const id1 = root->objectId();
+  auto const id2 = root->objectId();
+  EXPECT_EQ(id1, id2);
+}
+
+TEST_F(TreeItemTest, SubclassTypeIdDiffersFromBaseClassId)
+{
+  auto concrete = std::make_shared<ConcreteItem>();
+  EXPECT_NE(concrete->typeId(), TreeItem::classId());
+  EXPECT_EQ(concrete->typeId(), ConcreteItem::classId());
+}
+
+TEST_F(TreeItemTest, SubclassClassIdIsStable)
+{
+  EXPECT_EQ(ConcreteItem::classId(), ConcreteItem::classId());
 }

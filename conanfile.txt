@@ -1,6 +1,7 @@
 [requires]
 qt/6.10.1
 gtest/1.17.0
+boost/1.87.0
 
 [options]
 qt/*:qtshadertools=True
@@ -20,6 +21,7 @@ qt/*:disabled_features="linguist"
 qt/*:with_pq=False
 qt/*:shared=True
 qt/*:opengl=no
+boost/*:header_only=True
 
 #[settings]
 qt/*:build.tools:cxxflags="['QT_NO_INT128']"

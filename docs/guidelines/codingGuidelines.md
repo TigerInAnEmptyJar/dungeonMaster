@@ -49,6 +49,10 @@ my_add_library(myLibrary
 )
 ```
 
+## Order of include files
+
+Sort include files from most specialized (this component) on top to most general (c++ header files) at the bottom. This helps to create include complete headers.
+
 ## Naming conventions
 
 |Entity||

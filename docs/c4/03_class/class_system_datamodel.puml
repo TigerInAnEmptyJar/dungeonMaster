@@ -1,22 +1,40 @@
 @startuml class_system_datamodel
 title "Class Diagram System Datamodel"
 
+namespace infrastructure {
+  class TreeItem {
+  -- Class identity --
+  + {static} classId(): uuid
+  + {abstract} typeId(): uuid
+  -- Instance identity --
+  - objectId: const uuid
+  + objectId(): uuid
+  -- Tree functions --
+  + parentItem(): TreeItem
+  + insertChild(index: int, child: TreeItem): void
+  + removeChild(child: TreeItem): void
+  + childAt(index: int): TreeItem
+  + size(): int
+  + begin(): ChildIterator
+  + end(): ChildIterator
+  -- Signals --
+  + childAboutToBeInserted(index: int, child: TreeItem): void
+  + childInserted(index: int, child: TreeItem): void
+  + childAboutToBeRemoved(index: int, child: TreeItem): void
+  + childRemoved(index: int, child: TreeItem): void
+  + subtreeChildAboutToBeInserted(parent: TreeItem, index: int, child: TreeItem): void
+  + subtreeChildInserted(parent: TreeItem, index: int, child: TreeItem): void
+  + subtreeChildAboutToBeRemoved(parent: TreeItem, index: int, child: TreeItem): void
+  + subtreeChildRemoved(parent: TreeItem, index: int, child: TreeItem): void
+  }
+}
+
 class BaseObject {
 -- Properties --
 + name : string
-+ description :string
-+ typeId: uuid
-+ objectId: uuid
--- Tree functions --
-+ parent(): BaseObject
-+ child(index: int): BaseObject 
-+ insertChild(child: BaseObject): bool
-+ removeChild(child: BaseObject): void
--- Signals --
-+ childAdded(child: BaseObject): void
-+ childRemoved(child: BaseObject): void
++ description : string
 }
-BaseObject *-- "*" BaseObject
+infrastructure.TreeItem <|-- BaseObject
 
 enum Attribute {
     STRENGTH,

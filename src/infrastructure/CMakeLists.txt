@@ -4,6 +4,7 @@ my_add_library(infrastructure
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/
   DEPENDS
     PUBLIC Qt6::Core
+    PUBLIC Boost::headers
   HEADER
     include/treeItem.hpp
   SOURCE

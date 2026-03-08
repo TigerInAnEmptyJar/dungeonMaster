@@ -1,5 +1,11 @@
 #include "treeItem.hpp"
 
+#include <QMetaType>
+
+#include <boost/uuid/random_generator.hpp>
+#include <boost/uuid/string_generator.hpp>
+#include <boost/uuid/uuid.hpp>
+
 #include <algorithm>
 #include <map>
 #include <vector>
@@ -10,9 +16,15 @@ namespace infrastructure {
 
 struct TreeItem::Impl
 {
+  boost::uuids::uuid const _objectId;
   std::weak_ptr<TreeItem> _parent;
   std::vector<std::shared_ptr<TreeItem>> _children;
   std::map<TreeItem*, std::vector<QMetaObject::Connection>> _connections;
+
+  explicit Impl(boost::uuids::uuid objectId)
+      : _objectId(objectId.is_nil() ? boost::uuids::random_generator{}() : objectId)
+  {
+  }
 
   auto connectChildSignals(TreeItem* owner, std::shared_ptr<TreeItem> const& child) -> void;
   auto disconnectChildSignals(std::shared_ptr<TreeItem> const& child) -> void;
@@ -49,9 +61,26 @@ auto TreeItem::Impl::disconnectChildSignals(std::shared_ptr<TreeItem> const& chi
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
-TreeItem::TreeItem(QObject* parent) : QObject(parent), _p(std::make_unique<Impl>()) {}
+TreeItem::TreeItem(boost::uuids::uuid objectId) : _p(std::make_unique<Impl>(objectId))
+{
+  static auto const _registered = qRegisterMetaType<boost::uuids::uuid>();
+  Q_UNUSED(_registered)
+}
 
 TreeItem::~TreeItem() = default;
+
+// ── Identity ──────────────────────────────────────────────────────────────────
+
+auto TreeItem::classId() -> boost::uuids::uuid
+{
+  static boost::uuids::uuid const id =
+      boost::uuids::string_generator()("a48e341c-f728-4705-b870-1dd72bf6b581");
+  return id;
+}
+
+auto TreeItem::typeId() const -> boost::uuids::uuid { return TreeItem::classId(); }
+
+auto TreeItem::objectId() const -> boost::uuids::uuid { return _p->_objectId; }
 
 // ── Tree manipulation ─────────────────────────────────────────────────────────
 

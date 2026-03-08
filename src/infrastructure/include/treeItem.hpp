@@ -1,9 +1,11 @@
 #pragma once
 
+#include <QObject>
+
+#include <boost/uuid/uuid.hpp>
+
 #include <memory>
 #include <vector>
-
-#include <QObject>
 
 namespace infrastructure {
 
@@ -15,6 +17,11 @@ namespace infrastructure {
  *  - Subtree signals – also forwarded from each child, so a single connection to
  *                      any ancestor receives events from the entire subtree below it.
  *
+ * Each node carries two UUIDs:
+ *  - A \em class UUID (\c classId / \c typeId) identifying the concrete type – used for IO.
+ *  - An \em instance UUID (\c objectId) identifying this specific object – used by the
+ *    object registry. Generated randomly if not supplied to the constructor.
+ *
  * \note Objects must be managed by std::shared_ptr (e.g. std::make_shared<TreeItem>())
  *       so that weak_from_this() is functional.
  */
@@ -23,13 +30,45 @@ class TreeItem : public QObject, public std::enable_shared_from_this<TreeItem>
   Q_OBJECT
 
 public:
-  explicit TreeItem(QObject* parent = nullptr);
-  ~TreeItem();
+  /**
+   * \brief Constructs a TreeItem with the given \p objectId.
+   *
+   * \param objectId  Explicit instance UUID. Use this when deserialising an
+   *                  existing object so it retains its identity.
+   */
+  explicit TreeItem(boost::uuids::uuid objectId = boost::uuids::uuid{});
+
+  ~TreeItem() override;
 
   TreeItem(TreeItem const&) = delete;
   auto operator=(TreeItem const&) -> TreeItem& = delete;
   TreeItem(TreeItem&&) = delete;
   auto operator=(TreeItem&&) -> TreeItem& = delete;
+
+  // ── Identity ──────────────────────────────────────────────────────────────
+
+  /**
+   * \brief Returns the UUID that identifies the \c TreeItem class itself.
+   *
+   * Concrete subclasses must shadow this with their own \c static classId()
+   * and override \c typeId() to return it.
+   */
+  static auto classId() -> boost::uuids::uuid;
+
+  /**
+   * \brief Returns the UUID of the concrete class of this instance.
+   *
+   * Override in every subclass to return that subclass's \c classId().
+   * The default implementation returns \c TreeItem::classId().
+   */
+  virtual auto typeId() const -> boost::uuids::uuid;
+
+  /**
+   * \brief Returns the unique instance UUID of this object.
+   *
+   * Set once at construction time and never changes.
+   */
+  auto objectId() const -> boost::uuids::uuid;
 
   /**
    * \brief Inserts \p child into this node's children at position \p index.
@@ -109,3 +148,5 @@ private:
 };
 
 } // namespace infrastructure
+
+Q_DECLARE_METATYPE(boost::uuids::uuid)
