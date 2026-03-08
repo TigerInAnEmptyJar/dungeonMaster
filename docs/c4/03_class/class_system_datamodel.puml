@@ -1,0 +1,240 @@
+@startuml class_system_datamodel
+title "Class Diagram System Datamodel"
+
+class BaseObject {
+-- Properties --
++ name : string
++ description :string
++ typeId: uuid
++ objectId: uuid
+-- Tree functions --
++ parent(): BaseObject
++ child(index: int): BaseObject 
++ insertChild(child: BaseObject): bool
++ removeChild(child: BaseObject): void
+-- Signals --
++ childAdded(child: BaseObject): void
++ childRemoved(child: BaseObject): void
+}
+BaseObject *-- "*" BaseObject
+
+enum Attribute {
+    STRENGTH,
+    DEXTERITY,
+    INTELLIGENCE,
+    HEALTH,
+    HITS,
+    WILL,
+    PERCEPTION,
+    FATIGUE,
+    BASIC_SPEED,
+    SPEED,
+}
+enum Difficulty {
+    EASY,
+    AVERAGE,
+    HARD,
+    VERY_HARD,
+}
+
+class Attribute {
++ cp(level: int): int
+}
+BaseObject <|-- Attribute
+
+class SecondaryAttribute {
+}
+Attribute <|-- SecondaryAttribute
+
+class Profession {
+
+}
+BaseObject <|-- Profession
+class ProfessionContainer{
+
+}
+BaseObject <|-- ProfessionContainer
+ProfessionContainer *-- "*" Profession
+class Race {
+    
+}
+BaseObject <|-- Race
+class RaceContainer{
+
+}
+BaseObject <|-- RaceContainer
+RaceContainer *-- "*" Race
+
+class Advantage {    
++ cp(): int
+}
+
+BaseObject <|-- Advantage
+
+class Skill {
+-- Properties --
++ attribute: Attribute
++ difficulty: Difficulty
+}
+BaseObject <|-- Skill
+Skill *-- Attribute
+Skill *-- Difficulty
+
+class SkillContainer
+BaseObject <|-- SkillContainer
+SkillContainer *-- "*" Skill
+enum SpellType {
+  AREA,
+  REGULAR,
+  BLOCKING,
+  INFORMATION,
+}
+
+enum ResistedType {
+  STRENGTH,
+  DEXTERITY,
+  INTELLIGENCE,
+  HEALTH,
+  HITS,
+  WILL,
+  PERCEPTION,
+  ENEMY_SPELL,  
+}
+class Prerequisite {
++ {abstract}
+}
+class Spell {
+-- Properties --
++ cost: int
++ maintenanceCost: int
++ timeToCast: Duration
++ duration: Duration
++ type: SpellType[]
++ resistedBy: ResistedType
++ prerequesites
+}
+Skill <|-- Spell
+Spell *-- SpellType
+Spell *-- ResistedType
+class SpellContainer
+BaseObject <|-- SpellContainer
+SpellContainer *-- "*" Spell
+
+class Psi {
+}
+BaseObject <|-- Psi
+class PsiSkill
+
+Skill <|-- PsiSkill
+PsiSkill o-- Psi
+Psi *-- "*" PsiSkill
+
+class PsiContainer
+BaseObject <|-- PsiContainer
+PsiContainer *-- "*" Psi
+
+enum ItemType {
+    MELEE, 
+    RANGED, 
+    POTION, 
+    BOLT, 
+    OTHER,
+}
+
+class InventoryItem {
++ price: int
++ weight: int
+}
+BaseObject <|-- InventoryItem
+InventoryItem *-- ItemType
+
+class ItemContainer
+BaseObject <|-- ItemContainer
+ItemContainer *-- "*" InventoryItem
+
+class Armor {
++ dr: [int, int]
+}
+InventoryItem <|-- Armor
+
+enum DamagingType {
+    SWING,
+    THRUST,
+}
+enum DamageType {
+    CRUSHING,
+    CUTTING,
+    IMPALING,
+    PIERCING,
+    SMALL_PIERCING,
+    BURNING,
+}
+
+class Weapon {
++ damageAdding: int
+}
+InventoryItem <|-- Weapon
+Weapon *-- DamagingType
+Weapon *-- DamageType 
+
+class Melee {
++ reach: int
++ parry: int
+}
+Weapon <|-- Melee
+
+class Ranged {
++ acc: int
++ halfRange: int
++ maxRange: int    
+}
+Weapon <|-- Ranged
+
+class Modifier {
++ {abstract} modify(value: int):int
+}
+
+BaseObject <|-- Modifier
+
+class ConstantModifier {
++ value: int 
+}
+Modifier <|-- ConstantModifier
+
+class ClampModifier {
++ minimum: int
++ maximum: int
+}
+Modifier <|-- ClampModifier
+
+class DependentModifier {
+}
+Modifier <|-- DependentModifier
+DependentModifier o-- BaseObject
+
+class ObjectFactory {
+-- Management --    
++ install(id: uuid, creator: functor): bool
++ uninstall(id: uuid): bool
++ installedTypes(): uuid[]
+-- Creation --
++ create(uuid): BaseObject
+}
+
+ObjectFactory -- BaseObject : creates
+
+class ObjectRegistry {
++ findObject(objectId: uuid): BaseObject
++ registerObject(BaseObject: uuid): void
++ unregisterObject(BaseObject: uuid): void
+}
+ObjectRegistry *-- "*" BaseObject 
+
+class ObjectResolver <template> {
++ id: uuid
+}
+
+BaseObject <|-- ObjectResolver
+ObjectResolver o-- ObjectRegistry
+
+@enduml

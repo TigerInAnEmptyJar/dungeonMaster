@@ -1,0 +1,41 @@
+@startuml class_system_io
+title "Class Diagram System IO"
+
+hide <<DataModel>> members
+package DataModel {
+    class BaseObject <<DataModel>>
+    class ObjectFactory <<DataModel>>
+}
+
+class Io {
++ install(serializer: Serializer): bool
++ uninstall(serializer: Serializer): bool
++ installedSerializers(): uuid[]
++ serializer(id: uuid): Serializer
++ serializer(filter: string): Serializer
++ allFilters(): string[]
+}
+
+Io o-- ObjectFactory
+
+abstract Serializer {
+{abstract}canRead(firstLine: string): bool
+{abstract}read(stream): BaseObject
+{abstract}write(stream): BaseObject
+{abstract}filters(): string[]
+{abstract}id(): uuid
+{abstract}provides(filter:string):bool
+}
+Io "*" *-- Serializer
+Serializer o-- ObjectFactory
+
+class JsonSerializer
+Serializer <|-- JsonSerializer
+
+class XmlSerializer
+Serializer <|-- XmlSerializer
+
+class LatexSerializer
+Serializer <|-- LatexSerializer
+
+@enduml
