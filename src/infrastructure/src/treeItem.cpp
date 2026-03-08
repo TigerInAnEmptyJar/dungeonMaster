@@ -97,6 +97,8 @@ auto TreeItem::insertChild(int index, std::shared_ptr<TreeItem> child) -> void
 
   Q_EMIT childInserted(clampedIndex, child);
   Q_EMIT subtreeChildInserted(shared_from_this(), clampedIndex, child);
+
+  child->onAddedToParent(shared_from_this());
 }
 
 auto TreeItem::removeChild(std::shared_ptr<TreeItem> child) -> void
@@ -117,6 +119,44 @@ auto TreeItem::removeChild(std::shared_ptr<TreeItem> child) -> void
 
   Q_EMIT childRemoved(index, child);
   Q_EMIT subtreeChildRemoved(shared_from_this(), index, child);
+
+  child->onRemovedFromParent();
+}
+
+auto TreeItem::swapChild(std::shared_ptr<TreeItem> oldChild, std::shared_ptr<TreeItem> newChild)
+    -> void
+{
+  auto it = std::find(_p->_children.begin(), _p->_children.end(), oldChild);
+  if (it == _p->_children.end()) {
+    return;
+  }
+
+  auto const index = static_cast<int>(std::distance(_p->_children.begin(), it));
+
+  // Remove old child
+  Q_EMIT childAboutToBeRemoved(index, oldChild);
+  Q_EMIT subtreeChildAboutToBeRemoved(shared_from_this(), index, oldChild);
+
+  _p->disconnectChildSignals(oldChild);
+  oldChild->_p->_parent.reset();
+  *it = newChild;
+
+  Q_EMIT childRemoved(index, oldChild);
+  Q_EMIT subtreeChildRemoved(shared_from_this(), index, oldChild);
+
+  oldChild->onRemovedFromParent();
+
+  // Insert new child at same position
+  Q_EMIT childAboutToBeInserted(index, newChild);
+  Q_EMIT subtreeChildAboutToBeInserted(shared_from_this(), index, newChild);
+
+  newChild->_p->_parent = weak_from_this();
+  _p->connectChildSignals(this, newChild);
+
+  Q_EMIT childInserted(index, newChild);
+  Q_EMIT subtreeChildInserted(shared_from_this(), index, newChild);
+
+  newChild->onAddedToParent(shared_from_this());
 }
 
 // ── Accessors ─────────────────────────────────────────────────────────────────
@@ -133,5 +173,11 @@ auto TreeItem::childAt(int index) const -> std::shared_ptr<TreeItem>
 auto TreeItem::begin() const -> ChildIterator { return _p->_children.cbegin(); }
 
 auto TreeItem::end() const -> ChildIterator { return _p->_children.cend(); }
+
+// ── Protected hooks ───────────────────────────────────────────────────────────
+
+auto TreeItem::onAddedToParent(std::shared_ptr<TreeItem> /*parent*/) -> void {}
+
+auto TreeItem::onRemovedFromParent() -> void {}
 
 } // namespace infrastructure

@@ -96,6 +96,19 @@ public:
   auto removeChild(std::shared_ptr<TreeItem> child) -> void;
 
   /**
+   * \brief Replaces \p oldChild with \p newChild at the same position.
+   *
+   * Emits childAboutToBeRemoved / childRemoved for the old child and
+   * childAboutToBeInserted / childInserted for the new child at the same index,
+   * plus the corresponding subtree signals. Does nothing if \p oldChild is not
+   * a direct child.
+   *
+   * \param oldChild  The child currently in the tree.
+   * \param newChild  The replacement child.
+   */
+  auto swapChild(std::shared_ptr<TreeItem> oldChild, std::shared_ptr<TreeItem> newChild) -> void;
+
+  /**
    * \brief Returns a weak_ptr to the parent node, or an empty weak_ptr for the root.
    */
   auto parentItem() const -> std::weak_ptr<TreeItem>;
@@ -145,6 +158,25 @@ Q_SIGNALS:
 private:
   struct Impl;
   std::unique_ptr<Impl> _p;
+
+protected:
+  /**
+   * \brief Called after this node is inserted into \p parent.
+   *
+   * The parent pointer is already set when this is called. The default
+   * implementation does nothing. Override to react to tree insertion.
+   *
+   * \param parent  The new parent node.
+   */
+  virtual auto onAddedToParent(std::shared_ptr<TreeItem> parent) -> void;
+
+  /**
+   * \brief Called after this node is removed from its parent.
+   *
+   * The parent pointer is already cleared when this is called. The default
+   * implementation does nothing.
+   */
+  virtual auto onRemovedFromParent() -> void;
 };
 
 } // namespace infrastructure

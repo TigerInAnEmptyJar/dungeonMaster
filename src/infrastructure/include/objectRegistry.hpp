@@ -64,6 +64,16 @@ public:
    */
   auto registeredCount() const -> int;
 
+Q_SIGNALS:
+  /**
+   * \brief Emitted after an object has been successfully registered.
+   *
+   * Not emitted when a duplicate registration is silently ignored.
+   *
+   * \param object  The newly registered object.
+   */
+  void objectRegistered(std::shared_ptr<TreeItem> object);
+
 private:
   struct Impl;
   std::unique_ptr<Impl> _p;

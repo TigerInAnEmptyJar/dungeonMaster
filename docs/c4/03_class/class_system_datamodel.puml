@@ -13,6 +13,7 @@ namespace infrastructure {
   + parentItem(): TreeItem
   + insertChild(index: int, child: TreeItem): void
   + removeChild(child: TreeItem): void
+  + swapChild(old: TreeItem, new: TreeItem): void
   + childAt(index: int): TreeItem
   + size(): int
   + begin(): ChildIterator
@@ -26,6 +27,9 @@ namespace infrastructure {
   + subtreeChildInserted(parent: TreeItem, index: int, child: TreeItem): void
   + subtreeChildAboutToBeRemoved(parent: TreeItem, index: int, child: TreeItem): void
   + subtreeChildRemoved(parent: TreeItem, index: int, child: TreeItem): void
+  -- Protected hooks --
+  # onAddedToParent(parent: TreeItem): void
+  # onRemovedFromParent(): void
   }
 
   class ObjectRegistry {
@@ -35,6 +39,8 @@ namespace infrastructure {
   -- Lookup --
   + findObject(id: uuid): weak_ptr<TreeItem>
   + registeredCount(): int
+  -- Signals --
+  + objectRegistered(object: TreeItem): void
   .. note ..
   does not own objects (weak_ptr)
   auto-removes on QObject::destroyed
@@ -57,6 +63,21 @@ namespace infrastructure {
   }
 
   ObjectFactory ..> TreeItem : creates
+
+  class ItemResolver {
+  -- Identity --
+  + {static} classId(): uuid
+  + typeId(): uuid
+  -- Accessors --
+  + targetId(): uuid
+  + isResolved(): bool
+  .. note ..
+  placeholder in the tree\nwaits for targetId in ObjectRegistry\nswaps itself out once target appears
+  }
+
+  TreeItem <|-- ItemResolver
+  ItemResolver ..> ObjectRegistry : watches
+  ItemResolver ..> TreeItem : swapsChild
 }
 
 class BaseObject {
@@ -260,12 +281,10 @@ class DependentModifier {
 Modifier <|-- DependentModifier
 DependentModifier o-- BaseObject
 
-class ObjectResolver <template> {
-+ id: uuid
-}
-
-BaseObject <|-- ObjectResolver
-ObjectResolver o-- infrastructure.ObjectRegistry
-ObjectResolver ..> infrastructure.ObjectFactory : uses
+note bottom of infrastructure.ItemResolver
+  Concrete realisation of the ObjectResolver concept.
+  Used during deserialisation when a referenced object
+  has not yet been created.
+end note
 
 @enduml

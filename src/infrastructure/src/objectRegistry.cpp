@@ -51,6 +51,8 @@ auto ObjectRegistry::registerObject(std::shared_ptr<TreeItem> object) -> void
   _p->_objects[id] = object;
   _p->_reverseMap[object.get()] = id;
 
+  Q_EMIT objectRegistered(object);
+
   // Auto-remove when the underlying QObject is destroyed.
   // The lambda captures this by pointer; the connection is torn down automatically
   // when either this registry or the object is destroyed first.

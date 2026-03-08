@@ -9,9 +9,11 @@ my_add_library(infrastructure
     include/treeItem.hpp
     include/objectRegistry.hpp
     include/objectFactory.hpp
+    include/itemResolver.hpp
   SOURCE
     src/treeItem.cpp
     src/objectRegistry.cpp
     src/objectFactory.cpp
+    src/itemResolver.cpp
   ALIAS DM::Infrastructure
 )

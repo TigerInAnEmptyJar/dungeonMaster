@@ -7,4 +7,5 @@ my_add_test(InfrastructureTests
     treeItemTest.cpp
     objectRegistryTest.cpp
     objectFactoryTest.cpp
+    itemResolverTest.cpp
 )
