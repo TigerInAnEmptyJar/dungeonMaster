@@ -2,7 +2,7 @@
 
 #include <boost/uuid/string_generator.hpp>
 
-namespace dm {
+namespace gurps_system {
 
 // ── Pimpl ─────────────────────────────────────────────────────────────────────
 
@@ -56,4 +56,4 @@ auto BaseObject::setDescription(QString const& description) -> void
   Q_EMIT descriptionChanged(_p->_description);
 }
 
-} // namespace dm
+} // namespace gurps_system

@@ -21,7 +21,7 @@ struct MockBaseObjectObserver
 
 } // namespace
 
-using namespace dm;
+using namespace gurps_system;
 
 // ── Fixture ───────────────────────────────────────────────────────────────────
 

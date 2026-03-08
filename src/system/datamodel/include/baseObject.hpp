@@ -5,7 +5,7 @@
 #include <QObject>
 #include <QString>
 
-namespace dm {
+namespace gurps_system {
 
 /**
  * \brief Base class for all named, describable objects in the GURPS system datamodel.
@@ -69,4 +69,4 @@ private:
   std::unique_ptr<Impl> _p;
 };
 
-} // namespace dm
+} // namespace gurps_system

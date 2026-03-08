@@ -3,6 +3,11 @@ my_add_test(SystemDatamodelTests
   DEPENDS
     DM::System::Datamodel
     Qt6::Core
+  INCLUDES
+    PRIVATE ${CMAKE_SOURCE_DIR}/src/system/datamodel/src/
   SOURCE
     baseObjectTest.cpp
+    formulaTest.cpp
+    attributeTest.cpp
+    registrationTest.cpp
 )

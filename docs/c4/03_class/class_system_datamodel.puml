@@ -80,7 +80,7 @@ namespace infrastructure {
   ItemResolver ..> TreeItem : swapsChild
 }
 
-namespace dm {
+namespace gurps_system {
   class BaseObject {
   -- Identity --
   + {static} classId(): uuid
@@ -94,11 +94,58 @@ namespace dm {
   + nameChanged(name: QString): void
   + descriptionChanged(description: QString): void
   }
+
+  abstract class Formula {
+  -- Identity --
+  + {static} classId(): uuid
+  + {abstract} typeId(): uuid
+  -- Interface --
+  + {abstract} levelBonus(investedCp: int): int
+  + {abstract} cpCost(levelBonus: int): int
+  }
+
+  class LinearFormula {
+  -- Identity --
+  + {static} classId(): uuid
+  + typeId(): uuid
+  -- Properties --
+  + costPerLevel: int
+  .. note ..
+  GURPS 4e: constant cost per level
+  }
+
+  class LookupFormula {
+  -- Identity --
+  + {static} classId(): uuid
+  + typeId(): uuid
+  -- Properties --
+  + table: map<int,int>
+  .. note ..
+  GURPS 3e: non-linear lookup table
+  }
+
+  gurps_system.Formula <|-- gurps_system.LinearFormula
+  gurps_system.Formula <|-- gurps_system.LookupFormula
+
+  class Attribute {
+  -- Identity --
+  + {static} classId(): uuid
+  + typeId(): uuid
+  -- Computed --
+  + level(investedCp: int): int
+  + cpForLevelBonus(levelBonus: int): int
+  .. note ..
+  handbook definition only\nno per-character state\nformula stored as first tree child\nthrows logic_error if formula child absent\n(see InstanceAttribute for live CP/level)
+  }
+
+  gurps_system.BaseObject <|-- gurps_system.Attribute
+  gurps_system.Attribute --> gurps_system.Formula
 }
 
-infrastructure.TreeItem <|-- dm.BaseObject
+infrastructure.TreeItem <|-- gurps_system.BaseObject
+infrastructure.TreeItem <|-- gurps_system.Formula
 
-enum Attribute {
+enum AttributeType {
     STRENGTH,
     DEXTERITY,
     INTELLIGENCE,
@@ -117,51 +164,46 @@ enum Difficulty {
     VERY_HARD,
 }
 
-class Attribute {
-+ cp(level: int): int
-}
-BaseObject <|-- Attribute
-
 class SecondaryAttribute {
 }
-Attribute <|-- SecondaryAttribute
+gurps_system.Attribute <|-- SecondaryAttribute
 
 class Profession {
 
 }
-BaseObject <|-- Profession
+gurps_system.BaseObject <|-- Profession
 class ProfessionContainer{
 
 }
-BaseObject <|-- ProfessionContainer
+gurps_system.BaseObject <|-- ProfessionContainer
 ProfessionContainer *-- "*" Profession
 class Race {
     
 }
-BaseObject <|-- Race
+gurps_system.BaseObject <|-- Race
 class RaceContainer{
 
 }
-BaseObject <|-- RaceContainer
+gurps_system.BaseObject <|-- RaceContainer
 RaceContainer *-- "*" Race
 
 class Advantage {    
 + cp(): int
 }
 
-BaseObject <|-- Advantage
+gurps_system.BaseObject <|-- Advantage
 
 class Skill {
 -- Properties --
-+ attribute: Attribute
++ attribute: AttributeType
 + difficulty: Difficulty
 }
-BaseObject <|-- Skill
-Skill *-- Attribute
+gurps_system.BaseObject <|-- Skill
+Skill *-- AttributeType
 Skill *-- Difficulty
 
 class SkillContainer
-BaseObject <|-- SkillContainer
+gurps_system.BaseObject <|-- SkillContainer
 SkillContainer *-- "*" Skill
 enum SpellType {
   AREA,
@@ -197,12 +239,12 @@ Skill <|-- Spell
 Spell *-- SpellType
 Spell *-- ResistedType
 class SpellContainer
-BaseObject <|-- SpellContainer
+gurps_system.BaseObject <|-- SpellContainer
 SpellContainer *-- "*" Spell
 
 class Psi {
 }
-BaseObject <|-- Psi
+gurps_system.BaseObject <|-- Psi
 class PsiSkill
 
 Skill <|-- PsiSkill
@@ -210,7 +252,7 @@ PsiSkill o-- Psi
 Psi *-- "*" PsiSkill
 
 class PsiContainer
-BaseObject <|-- PsiContainer
+gurps_system.BaseObject <|-- PsiContainer
 PsiContainer *-- "*" Psi
 
 enum ItemType {
@@ -225,11 +267,11 @@ class InventoryItem {
 + price: int
 + weight: int
 }
-BaseObject <|-- InventoryItem
+gurps_system.BaseObject <|-- InventoryItem
 InventoryItem *-- ItemType
 
 class ItemContainer
-BaseObject <|-- ItemContainer
+gurps_system.BaseObject <|-- ItemContainer
 ItemContainer *-- "*" InventoryItem
 
 class Armor {
@@ -274,7 +316,7 @@ class Modifier {
 + {abstract} modify(value: int):int
 }
 
-BaseObject <|-- Modifier
+gurps_system.BaseObject <|-- Modifier
 
 class ConstantModifier {
 + value: int 
@@ -290,7 +332,7 @@ Modifier <|-- ClampModifier
 class DependentModifier {
 }
 Modifier <|-- DependentModifier
-DependentModifier o-- BaseObject
+DependentModifier o-- gurps_system.BaseObject
 
 note bottom of infrastructure.ItemResolver
   Concrete realisation of the ObjectResolver concept.
