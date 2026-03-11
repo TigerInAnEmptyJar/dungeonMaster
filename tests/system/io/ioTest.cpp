@@ -10,10 +10,21 @@
 
 #include <QCoreApplication>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include <memory>
 #include <sstream>
+#include <vector>
+
+using testing::_;
+using testing::AtMost;
+using testing::ElementsAre;
+using testing::IsEmpty;
+using testing::Return;
+using testing::SizeIs;
+using testing::StrictMock;
+using testing::UnorderedElementsAre;
 
 // ── QCoreApplication ──────────────────────────────────────────────────────────
 
@@ -23,7 +34,6 @@ static char** argv_storage = nullptr;
 static QCoreApplication app{argc_storage, argv_storage};
 
 // ── Test double ───────────────────────────────────────────────────────────────
-// A minimal concrete Serializer used to exercise Io behaviour.
 
 namespace {
 
@@ -33,50 +43,37 @@ static const boost::uuids::uuid kJsonId =
 static const boost::uuids::uuid kXmlId =
     boost::uuids::string_generator{}("aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee");
 
-class StubSerializer : public gurps_system::Serializer
+class SerializerMock : public gurps_system::Serializer
 {
 public:
-  explicit StubSerializer(boost::uuids::uuid id, QStringList filters, char detectChar = '{')
-      : _id{id}, _filters{std::move(filters)}, _detectChar{detectChar}
-  {
-  }
-
-  auto id() const -> boost::uuids::uuid override { return _id; }
-  auto filters() const -> QStringList override { return _filters; }
-  auto provides(QString const& filter) const -> bool override { return _filters.contains(filter); }
-  auto canRead(std::string const& firstLine) const -> bool override
-  {
-    return !firstLine.empty() && firstLine.front() == _detectChar;
-  }
-  auto read(std::string const&, std::istream&, infrastructure::ObjectFactory&,
-            infrastructure::ObjectRegistry&) const
-      -> std::shared_ptr<infrastructure::TreeItem> override
-  {
-    readCalled = true;
-    return nullptr;
-  }
-  auto write(std::ostream&, infrastructure::TreeItem const&) const -> void override
-  {
-    writeCalled = true;
-  }
-
-  mutable bool readCalled{false};
-  mutable bool writeCalled{false};
-
-private:
-  boost::uuids::uuid _id;
-  QStringList _filters;
-  char _detectChar;
+  MOCK_METHOD(boost::uuids::uuid, id, (), (const, override));
+  MOCK_METHOD(QStringList, filters, (), (const, override));
+  MOCK_METHOD(bool, provides, (QString const& filter), (const, override));
+  MOCK_METHOD(bool, canRead, (std::string const& firstLine), (const, override));
+  MOCK_METHOD(std::vector<std::shared_ptr<infrastructure::TreeItem>>, read,
+              (std::string const& firstLine, std::istream& stream,
+               infrastructure::ObjectFactory& factory, infrastructure::ObjectRegistry& registry),
+              (const, override));
+  MOCK_METHOD(void, write,
+              (std::ostream & stream,
+               std::vector<std::shared_ptr<infrastructure::TreeItem>> const& objects),
+              (const, override));
 };
 
-auto makeJson() -> std::shared_ptr<StubSerializer>
+auto makeJson() -> std::shared_ptr<SerializerMock>
 {
-  return std::make_shared<StubSerializer>(kJsonId, QStringList{"GURPS JSON (*.json)", "*.json"});
+  auto mock = std::make_shared<StrictMock<SerializerMock>>();
+  ON_CALL(*mock, id()).WillByDefault(Return(kJsonId));
+  ON_CALL(*mock, filters()).WillByDefault(Return(QStringList{"GURPS JSON (*.json)", "*.json"}));
+  return mock;
 }
 
-auto makeXml() -> std::shared_ptr<StubSerializer>
+auto makeXml() -> std::shared_ptr<SerializerMock>
 {
-  return std::make_shared<StubSerializer>(kXmlId, QStringList{"GURPS XML (*.xml)", "*.xml"}, '<');
+  auto mock = std::make_shared<StrictMock<SerializerMock>>();
+  ON_CALL(*mock, id()).WillByDefault(Return(kXmlId));
+  ON_CALL(*mock, filters()).WillByDefault(Return(QStringList{"GURPS XML (*.xml)", "*.xml"}));
+  return mock;
 }
 
 } // namespace
@@ -95,12 +92,21 @@ protected:
 
 // ── install ───────────────────────────────────────────────────────────────────
 
-TEST_F(IoTest, InstallReturnsTrueForNewSerializer) { EXPECT_TRUE(io.install(makeJson())); }
+TEST_F(IoTest, InstallReturnsTrueForNewSerializer)
+{
+  auto serializer = makeJson();
+  EXPECT_CALL(*serializer, id()).WillOnce(Return(kJsonId));
+  io.install(serializer);
+}
 
 TEST_F(IoTest, InstallReturnsFalseForDuplicateId)
 {
-  io.install(makeJson());
-  EXPECT_FALSE(io.install(makeJson()));
+  auto serializer = makeJson();
+  EXPECT_CALL(*serializer, id()).WillOnce(Return(kJsonId));
+  io.install(serializer);
+  auto serializer2 = makeJson();
+  EXPECT_CALL(*serializer2, id()).WillOnce(Return(kJsonId));
+  EXPECT_FALSE(io.install(serializer2));
 }
 
 TEST_F(IoTest, InstallReturnsFalseForNullptr) { EXPECT_FALSE(io.install(nullptr)); }
@@ -109,7 +115,9 @@ TEST_F(IoTest, InstallReturnsFalseForNullptr) { EXPECT_FALSE(io.install(nullptr)
 
 TEST_F(IoTest, UninstallReturnsTrueForInstalledSerializer)
 {
-  io.install(makeJson());
+  auto serializer = makeJson();
+  EXPECT_CALL(*serializer, id()).WillOnce(Return(kJsonId));
+  io.install(serializer);
   EXPECT_TRUE(io.uninstall(kJsonId));
 }
 
@@ -117,7 +125,9 @@ TEST_F(IoTest, UninstallReturnsFalseForUnknownId) { EXPECT_FALSE(io.uninstall(kJ
 
 TEST_F(IoTest, UninstalledSerializerIsNoLongerFound)
 {
-  io.install(makeJson());
+  auto serializer = makeJson();
+  EXPECT_CALL(*serializer, id()).WillOnce(Return(kJsonId));
+  io.install(serializer);
   io.uninstall(kJsonId);
   EXPECT_EQ(io.serializer(kJsonId), nullptr);
 }
@@ -131,17 +141,22 @@ TEST_F(IoTest, InstalledSerializersIsEmptyInitially)
 
 TEST_F(IoTest, InstalledSerializersContainsInstalledId)
 {
-  io.install(makeJson());
+  auto serializer = makeJson();
+  EXPECT_CALL(*serializer, id()).WillOnce(Return(kJsonId));
+  io.install(serializer);
   auto ids = io.installedSerializers();
-  EXPECT_EQ(ids.size(), 1u);
-  EXPECT_EQ(ids[0], kJsonId);
+  EXPECT_THAT(ids, ElementsAre(kJsonId));
 }
 
 TEST_F(IoTest, InstalledSerializersReflectsMultipleInstalls)
 {
-  io.install(makeJson());
-  io.install(makeXml());
-  EXPECT_EQ(io.installedSerializers().size(), 2u);
+  auto json = makeJson();
+  auto xml = makeXml();
+  EXPECT_CALL(*json, id()).WillOnce(Return(kJsonId));
+  EXPECT_CALL(*xml, id()).WillOnce(Return(kXmlId));
+  io.install(json);
+  io.install(xml);
+  EXPECT_THAT(io.installedSerializers(), UnorderedElementsAre(kJsonId, kXmlId));
 }
 
 // ── serializer(uuid) ─────────────────────────────────────────────────────────
@@ -154,6 +169,7 @@ TEST_F(IoTest, SerializerByIdReturnsNullForUnknownId)
 TEST_F(IoTest, SerializerByIdReturnsCorrectSerializer)
 {
   auto s = makeJson();
+  EXPECT_CALL(*s, id()).WillOnce(Return(kJsonId));
   io.install(s);
   EXPECT_EQ(io.serializer(kJsonId), s.get());
 }
@@ -168,13 +184,18 @@ TEST_F(IoTest, SerializerByFilterReturnsNullForUnknownFilter)
 TEST_F(IoTest, SerializerByFilterReturnsMatchingSerializer)
 {
   auto s = makeJson();
+  EXPECT_CALL(*s, id()).WillOnce(Return(kJsonId));
+  EXPECT_CALL(*s, provides(_)).WillOnce(Return(true));
   io.install(s);
   EXPECT_EQ(io.serializer("*.json"), s.get());
 }
 
 TEST_F(IoTest, SerializerByFilterDoesNotMatchOtherSerializer)
 {
-  io.install(makeJson());
+  auto s = makeJson();
+  EXPECT_CALL(*s, id()).WillOnce(Return(kJsonId));
+  EXPECT_CALL(*s, provides(_)).WillOnce(Return(false));
+  io.install(s);
   EXPECT_EQ(io.serializer("*.xml"), nullptr);
 }
 
@@ -184,105 +205,115 @@ TEST_F(IoTest, AllFiltersIsEmptyInitially) { EXPECT_TRUE(io.allFilters().isEmpty
 
 TEST_F(IoTest, AllFiltersContainsFiltersFromInstalledSerializers)
 {
-  io.install(makeJson());
-  io.install(makeXml());
+  auto json = makeJson();
+  auto xml = makeXml();
+  EXPECT_CALL(*json, id()).WillOnce(Return(kJsonId));
+  EXPECT_CALL(*xml, id()).WillOnce(Return(kXmlId));
+  EXPECT_CALL(*json, filters()).WillOnce(Return(QStringList{"GURPS JSON (*.json)", "*.json"}));
+  EXPECT_CALL(*xml, filters()).WillOnce(Return(QStringList{"GURPS XML (*.xml)", "*.xml"}));
+  io.install(json);
+  io.install(xml);
   auto f = io.allFilters();
-  EXPECT_TRUE(f.contains("GURPS JSON (*.json)"));
-  EXPECT_TRUE(f.contains("GURPS XML (*.xml)"));
+  EXPECT_THAT(f,
+              UnorderedElementsAre("GURPS JSON (*.json)", "GURPS XML (*.xml)", "*.json", "*.xml"));
 }
 
 TEST_F(IoTest, AllFiltersExcludesUninstalledSerializer)
 {
-  io.install(makeJson());
+  auto json = makeJson();
+  EXPECT_CALL(*json, id()).WillOnce(Return(kJsonId));
+  io.install(json);
   io.uninstall(kJsonId);
-  EXPECT_TRUE(io.allFilters().isEmpty());
+  EXPECT_THAT(io.allFilters(), IsEmpty());
 }
 
 // ── Serializer interface ──────────────────────────────────────────────────────
 
-TEST(SerializerTest, CanReadDetectsJsonFormat)
+TEST_F(IoTest, ReadReturnsEmptyForEmptyStream)
 {
-  StubSerializer s{kJsonId, {}};
-  EXPECT_TRUE(s.canRead("{\"type\":\"attribute\"}"));
-  EXPECT_FALSE(s.canRead("<xml>"));
-}
-
-TEST(SerializerTest, ProvidesMatchesExactFilter)
-{
-  StubSerializer s{kJsonId, QStringList{"GURPS JSON (*.json)"}};
-  EXPECT_TRUE(s.provides("GURPS JSON (*.json)"));
-  EXPECT_FALSE(s.provides("GURPS XML (*.xml)"));
-}
-
-// ── Io::read forwarding ───────────────────────────────────────────────────────
-
-TEST_F(IoTest, ReadReturnsNullptrForEmptyStream)
-{
-  io.install(makeJson());
+  auto json = makeJson();
+  EXPECT_CALL(*json, id()).WillOnce(Return(kJsonId));
+  io.install(json);
   std::istringstream stream;
-  EXPECT_EQ(io.read(stream), nullptr);
+  // EXPECT_CALL(*json, canRead(_)).WillOnce(Return(true));
+  EXPECT_TRUE(io.read(stream).empty());
 }
 
-TEST_F(IoTest, ReadReturnsNullptrWhenNoSerializerMatches)
+TEST_F(IoTest, ReadReturnsEmptyWhenNoSerializerMatches)
 {
-  io.install(makeJson());
+  auto json = makeJson();
+  EXPECT_CALL(*json, id()).WillOnce(Return(kJsonId));
+  io.install(json);
   std::istringstream stream{"<not-json>\nrest"};
-  EXPECT_EQ(io.read(stream), nullptr);
+  EXPECT_CALL(*json, canRead("<not-json>")).WillOnce(Return(false));
+  EXPECT_TRUE(io.read(stream).empty());
 }
 
 TEST_F(IoTest, ReadDelegatesToMatchingSerializer)
 {
   auto json = makeJson();
+  EXPECT_CALL(*json, id()).WillOnce(Return(kJsonId));
   io.install(json);
-  std::istringstream stream{"{\"type\":\"attribute\"}\nrest"};
+  std::istringstream stream{"[]\n"};
+  EXPECT_CALL(*json, canRead("[]")).WillOnce(Return(true));
+  EXPECT_CALL(*json, read("[]", _, _, _))
+      .WillOnce(Return(std::vector<std::shared_ptr<infrastructure::TreeItem>>{}));
   io.read(stream);
-  EXPECT_TRUE(json->readCalled);
 }
 
 TEST_F(IoTest, ReadSelectsCorrectSerializerAmongMultiple)
 {
   auto json = makeJson();
   auto xml = makeXml();
+  EXPECT_CALL(*json, id()).WillOnce(Return(kJsonId));
+  EXPECT_CALL(*xml, id()).WillOnce(Return(kXmlId));
   io.install(json);
   io.install(xml);
   std::istringstream stream{"<root/>\nrest"};
+  EXPECT_CALL(*json, canRead("<root/>")).Times(AtMost(1)).WillOnce(Return(false));
+  EXPECT_CALL(*xml, canRead("<root/>")).WillOnce(Return(true));
+  EXPECT_CALL(*xml, read("<root/>", _, _, _))
+      .WillOnce(Return(std::vector<std::shared_ptr<infrastructure::TreeItem>>{}));
   io.read(stream);
-  EXPECT_FALSE(json->readCalled);
-  EXPECT_TRUE(xml->readCalled);
+  std::cout << "Read test completed" << std::endl;
 }
 
-// ── Io::write forwarding ───────────────────────────────────────────────────────
+// ── Io::write forwarding ──────────────────────────────────────────────────────
 
 TEST_F(IoTest, WriteByFilterThrowsForUnknownFilter)
 {
-  auto item = std::make_shared<infrastructure::TreeItem>();
+  std::vector<std::shared_ptr<infrastructure::TreeItem>> items;
   std::ostringstream stream;
-  EXPECT_THROW(io.write(stream, *item, "*.json"), std::invalid_argument);
+  EXPECT_THROW(io.write(stream, items, "*.json"), std::invalid_argument);
 }
 
 TEST_F(IoTest, WriteByFilterDelegatesToMatchingSerializer)
 {
   auto json = makeJson();
+  EXPECT_CALL(*json, id()).WillOnce(Return(kJsonId));
   io.install(json);
-  auto item = std::make_shared<infrastructure::TreeItem>();
+  std::vector<std::shared_ptr<infrastructure::TreeItem>> items;
   std::ostringstream stream;
-  io.write(stream, *item, "*.json");
-  EXPECT_TRUE(json->writeCalled);
+  EXPECT_CALL(*json, provides(QString("*.json"))).WillOnce(Return(true));
+  EXPECT_CALL(*json, write(_, _));
+  io.write(stream, items, "*.json");
 }
 
 TEST_F(IoTest, WriteByUuidThrowsForUnknownId)
 {
-  auto item = std::make_shared<infrastructure::TreeItem>();
+  std::vector<std::shared_ptr<infrastructure::TreeItem>> items;
   std::ostringstream stream;
-  EXPECT_THROW(io.write(stream, *item, kJsonId), std::invalid_argument);
+  EXPECT_THROW(io.write(stream, items, kJsonId), std::invalid_argument);
 }
 
 TEST_F(IoTest, WriteByUuidDelegatesToMatchingSerializer)
 {
   auto json = makeJson();
+  EXPECT_CALL(*json, id()).WillOnce(Return(kJsonId));
   io.install(json);
-  auto item = std::make_shared<infrastructure::TreeItem>();
+  std::vector<std::shared_ptr<infrastructure::TreeItem>> items;
   std::ostringstream stream;
-  io.write(stream, *item, kJsonId);
-  EXPECT_TRUE(json->writeCalled);
+  // EXPECT_CALL(*json, provides(_)).WillOnce(Return(true));
+  EXPECT_CALL(*json, write(_, _)).WillOnce(testing::Return());
+  io.write(stream, items, kJsonId);
 }

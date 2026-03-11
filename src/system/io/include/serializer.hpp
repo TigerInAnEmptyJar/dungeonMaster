@@ -8,6 +8,7 @@
 #include <iosfwd>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace infrastructure {
 class ObjectFactory;
@@ -74,24 +75,38 @@ public:
   // ── IO ────────────────────────────────────────────────────────────────────
 
   /**
-   * \brief Reads a domain object from \p stream.
+   * \brief Reads all objects from \p stream.
    *
-   * \p firstLine contains the first line already consumed by \c Io::read()
-   * during format detection — the serializer may prepend it when parsing.
-   * Uses \p factory to instantiate objects by type UUID and registers each
-   * created object in \p registry.
+   * The stream contains a flat, self-describing collection of objects in the
+   * serializer's own format.  \p firstLine has already been consumed by
+   * \c Io::read() for format detection and is passed verbatim so the
+   * serializer can reconstruct the full document.
    *
-   * \returns The root object read, or \c nullptr on error.
+   * Child relationships encoded as UUID references are wired by inserting an
+   * \c ItemResolver from \p registry for forward references, or directly via
+   * \c insertChild for back references.
+   *
+   * Every created object is registered in \p registry.
+   *
+   * \returns All top-level objects in the order they appear in the stream.
+   *          An empty vector indicates a parse error or empty input.
    */
   virtual auto read(std::string const& firstLine, std::istream& stream,
                     infrastructure::ObjectFactory& factory,
                     infrastructure::ObjectRegistry& registry) const
-      -> std::shared_ptr<infrastructure::TreeItem> = 0;
+      -> std::vector<std::shared_ptr<infrastructure::TreeItem>> = 0;
 
   /**
-   * \brief Writes \p obj and its subtree to \p stream.
+   * \brief Writes \p objects and all objects reachable from them to \p stream.
+   *
+   * The serializer collects the full object graph reachable from \p objects
+   * (DFS, deduplicated by objectId) and emits a flat representation where
+   * child relationships are encoded as UUID references.  Shared objects
+   * therefore appear exactly once in the output.
    */
-  virtual auto write(std::ostream& stream, infrastructure::TreeItem const& obj) const -> void = 0;
+  virtual auto write(std::ostream& stream,
+                     std::vector<std::shared_ptr<infrastructure::TreeItem>> const& objects) const
+      -> void = 0;
 
 private:
   struct Impl;

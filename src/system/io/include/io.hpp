@@ -94,34 +94,35 @@ public:
   // ── Forwarding ───────────────────────────────────────────────────────────
 
   /**
-   * \brief Reads a domain object from \p stream.
+   * \brief Reads all objects from \p stream.
    *
    * Reads the first line of \p stream, finds the first installed serializer
    * for which \c canRead(firstLine) is \c true, and delegates to its
    * \c read() method.  The first line is passed to the serializer verbatim
    * so it can reconstruct the full document.
    *
-   * \returns The root object read, or \c nullptr if no serializer matched
-   *          or the stream was empty.  The object and all sub-objects are
-   *          registered in the \c ObjectRegistry supplied at construction.
+   * \returns All objects read, registered in the \c ObjectRegistry supplied
+   *          at construction.  An empty vector indicates no matching
+   *          serializer or an empty/unparseable stream.
    */
-  auto read(std::istream& stream) const -> std::shared_ptr<infrastructure::TreeItem>;
+  auto read(std::istream& stream) const -> std::vector<std::shared_ptr<infrastructure::TreeItem>>;
 
   /**
-   * \brief Writes \p obj to \p stream using the serializer that provides
-   *        \p filter.
+   * \brief Writes \p objects to \p stream using the serializer that provides \p filter.
    *
    * \throws std::invalid_argument if no installed serializer provides \p filter.
    */
-  auto write(std::ostream& stream, infrastructure::TreeItem const& obj, QString const& filter) const
-      -> void;
+  auto write(std::ostream& stream,
+             std::vector<std::shared_ptr<infrastructure::TreeItem>> const& objects,
+             QString const& filter) const -> void;
 
   /**
-   * \brief Writes \p obj to \p stream using the serializer identified by \p id.
+   * \brief Writes \p objects to \p stream using the serializer identified by \p id.
    *
    * \throws std::invalid_argument if no installed serializer has \p id.
    */
-  auto write(std::ostream& stream, infrastructure::TreeItem const& obj,
+  auto write(std::ostream& stream,
+             std::vector<std::shared_ptr<infrastructure::TreeItem>> const& objects,
              boost::uuids::uuid const& id) const -> void;
 
 private:
