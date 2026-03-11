@@ -18,8 +18,9 @@ struct Attribute::Impl
 
 static auto formulaChild(Attribute const& a) -> Formula const&
 {
-  if (a.size() == 0)
+  if (a.size() == 0) {
     throw std::logic_error{"Attribute: no formula child — add a formula before calling level()"};
+  }
   return static_cast<Formula const&>(*a.childAt(0));
 }
 

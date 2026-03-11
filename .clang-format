@@ -17,5 +17,6 @@ BraceWrapping:
   BeforeElse:      false
   IndentBraces:    false
 BreakBeforeBraces: Custom
+InsertBraces: true
 AlwaysBreakAfterReturnType: None
 PenaltyReturnTypeOnItsOwnLine: 10000000

@@ -15,8 +15,9 @@ LookupFormula::LookupFormula(CpTable table, boost::uuids::uuid objectId)
   }();
 
   auto it = _table.find(0);
-  if (it == _table.end() || it->second != 0)
+  if (it == _table.end() || it->second != 0) {
     throw std::invalid_argument{"LookupFormula: table must contain entry {0, 0}"};
+  }
 }
 
 auto LookupFormula::classId() -> boost::uuids::uuid
@@ -31,10 +32,11 @@ auto LookupFormula::levelBonus(int investedCp) const -> int
 {
   int result = 0;
   for (auto const& [bonus, cost] : _table) {
-    if (cost <= investedCp)
+    if (cost <= investedCp) {
       result = bonus;
-    else
+    } else {
       break;
+    }
   }
   return result;
 }
@@ -46,8 +48,9 @@ auto LookupFormula::table() const -> CpTable const& { return _table; }
 auto LookupFormula::setTable(CpTable table) -> void
 {
   auto it = table.find(0);
-  if (it == table.end() || it->second != 0)
+  if (it == table.end() || it->second != 0) {
     throw std::invalid_argument{"LookupFormula: table must contain entry {0, 0}"};
+  }
   _table = std::move(table);
 }
 

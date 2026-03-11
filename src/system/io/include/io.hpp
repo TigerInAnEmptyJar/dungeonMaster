@@ -96,14 +96,14 @@ public:
   /**
    * \brief Reads all objects from \p stream.
    *
-   * Reads the first line of \p stream, finds the first installed serializer
-   * for which \c canRead(firstLine) is \c true, and delegates to its
-   * \c read() method.  The first line is passed to the serializer verbatim
-   * so it can reconstruct the full document.
+   * Reads the 23-byte binary header from \p stream, verifies the \c "DMFMT"
+   * magic bytes, extracts the serializer UUID and format version, locates
+   * the matching installed serializer by UUID, and delegates to its
+   * \c read() method with the parsed header and version.
    *
    * \returns All objects read, registered in the \c ObjectRegistry supplied
-   *          at construction.  An empty vector indicates no matching
-   *          serializer or an empty/unparseable stream.
+   *          at construction.  An empty vector indicates an unrecognised
+   *          magic, no matching serializer, or an empty/unparseable stream.
    */
   auto read(std::istream& stream) const -> std::vector<std::shared_ptr<infrastructure::TreeItem>>;
 

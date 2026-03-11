@@ -5,4 +5,7 @@ my_add_test(SystemIoTests
     Qt6::Core
   SOURCE
     ioTest.cpp
+    jsonSerializerTest.cpp
+  HEADER
+    testTypes.hpp
 )

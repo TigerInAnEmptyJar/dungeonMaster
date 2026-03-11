@@ -3,7 +3,13 @@
 #include <objectFactory.hpp>
 #include <objectRegistry.hpp>
 
+#include <boost/uuid/uuid.hpp>
+
 #include <algorithm>
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
 #include <istream>
 #include <stdexcept>
 #include <string>
@@ -98,18 +104,34 @@ auto Io::allFilters() const -> QStringList
 
 auto Io::read(std::istream& stream) const -> std::vector<std::shared_ptr<infrastructure::TreeItem>>
 {
-  std::string firstLine;
-  if (!std::getline(stream, firstLine)) {
+  // Read the fixed-size binary header
+  Serializer::FileHeader header{};
+  if (!stream.read(reinterpret_cast<char*>(header.data()), Serializer::kHeaderSize)) {
     return {};
   }
 
-  auto it = std::ranges::find_if(
-      _p->serializers, [&firstLine](auto const& s) { return s.second->canRead(firstLine); });
-  if (it == _p->serializers.end()) {
+  // Verify magic bytes "DMFMT"
+  static constexpr char kMagic[5] = {'D', 'M', 'F', 'M', 'T'};
+  if (std::memcmp(header.data(), kMagic, 5) != 0) {
     return {};
   }
 
-  auto items = it->second->read(firstLine, stream, _p->factory, _p->registry);
+  // Extract serializer UUID from bytes 5–20
+  boost::uuids::uuid formatId{};
+  std::memcpy(formatId.data, header.data() + 5, 16);
+
+  // Extract format version (big-endian uint16) from bytes 21–22
+  auto const version =
+      static_cast<uint16_t>((static_cast<uint16_t>(std::to_integer<uint8_t>(header[21])) << 8) |
+                            static_cast<uint16_t>(std::to_integer<uint8_t>(header[22])));
+
+  // O(1) lookup by UUID
+  auto* s = serializer(formatId);
+  if (!s) {
+    return {};
+  }
+
+  auto items = s->read(header, version, stream, _p->factory, _p->registry);
 
   // Register every returned item so that ItemResolver children resolve in order.
   for (auto const& item : items) {

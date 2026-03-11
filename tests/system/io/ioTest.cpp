@@ -18,7 +18,6 @@
 #include <vector>
 
 using testing::_;
-using testing::AtMost;
 using testing::ElementsAre;
 using testing::IsEmpty;
 using testing::Return;
@@ -49,10 +48,10 @@ public:
   MOCK_METHOD(boost::uuids::uuid, id, (), (const, override));
   MOCK_METHOD(QStringList, filters, (), (const, override));
   MOCK_METHOD(bool, provides, (QString const& filter), (const, override));
-  MOCK_METHOD(bool, canRead, (std::string const& firstLine), (const, override));
   MOCK_METHOD(std::vector<std::shared_ptr<infrastructure::TreeItem>>, read,
-              (std::string const& firstLine, std::istream& stream,
-               infrastructure::ObjectFactory& factory, infrastructure::ObjectRegistry& registry),
+              (gurps_system::Serializer::FileHeader const& header, uint16_t version,
+               std::istream& stream, infrastructure::ObjectFactory& factory,
+               infrastructure::ObjectRegistry& registry),
               (const, override));
   MOCK_METHOD(void, write,
               (std::ostream & stream,
@@ -235,7 +234,6 @@ TEST_F(IoTest, ReadReturnsEmptyForEmptyStream)
   EXPECT_CALL(*json, id()).WillOnce(Return(kJsonId));
   io.install(json);
   std::istringstream stream;
-  // EXPECT_CALL(*json, canRead(_)).WillOnce(Return(true));
   EXPECT_TRUE(io.read(stream).empty());
 }
 
@@ -244,8 +242,11 @@ TEST_F(IoTest, ReadReturnsEmptyWhenNoSerializerMatches)
   auto json = makeJson();
   EXPECT_CALL(*json, id()).WillOnce(Return(kJsonId));
   io.install(json);
-  std::istringstream stream{"<not-json>\nrest"};
-  EXPECT_CALL(*json, canRead("<not-json>")).WillOnce(Return(false));
+  // Build a header for kXmlId (not installed)
+  auto const header = gurps_system::Serializer::buildHeader(kXmlId, 1);
+  std::string const data{reinterpret_cast<char const*>(header.data()),
+                         gurps_system::Serializer::kHeaderSize};
+  std::istringstream stream{data};
   EXPECT_TRUE(io.read(stream).empty());
 }
 
@@ -254,9 +255,11 @@ TEST_F(IoTest, ReadDelegatesToMatchingSerializer)
   auto json = makeJson();
   EXPECT_CALL(*json, id()).WillOnce(Return(kJsonId));
   io.install(json);
-  std::istringstream stream{"[]\n"};
-  EXPECT_CALL(*json, canRead("[]")).WillOnce(Return(true));
-  EXPECT_CALL(*json, read("[]", _, _, _))
+  auto const header = gurps_system::Serializer::buildHeader(kJsonId, 1);
+  std::string const data{reinterpret_cast<char const*>(header.data()),
+                         gurps_system::Serializer::kHeaderSize};
+  std::istringstream stream{data};
+  EXPECT_CALL(*json, read(_, _, _, _, _))
       .WillOnce(Return(std::vector<std::shared_ptr<infrastructure::TreeItem>>{}));
   io.read(stream);
 }
@@ -269,13 +272,13 @@ TEST_F(IoTest, ReadSelectsCorrectSerializerAmongMultiple)
   EXPECT_CALL(*xml, id()).WillOnce(Return(kXmlId));
   io.install(json);
   io.install(xml);
-  std::istringstream stream{"<root/>\nrest"};
-  EXPECT_CALL(*json, canRead("<root/>")).Times(AtMost(1)).WillOnce(Return(false));
-  EXPECT_CALL(*xml, canRead("<root/>")).WillOnce(Return(true));
-  EXPECT_CALL(*xml, read("<root/>", _, _, _))
+  auto const header = gurps_system::Serializer::buildHeader(kXmlId, 1);
+  std::string const data{reinterpret_cast<char const*>(header.data()),
+                         gurps_system::Serializer::kHeaderSize};
+  std::istringstream stream{data};
+  EXPECT_CALL(*xml, read(_, _, _, _, _))
       .WillOnce(Return(std::vector<std::shared_ptr<infrastructure::TreeItem>>{}));
   io.read(stream);
-  std::cout << "Read test completed" << std::endl;
 }
 
 // ── Io::write forwarding ──────────────────────────────────────────────────────

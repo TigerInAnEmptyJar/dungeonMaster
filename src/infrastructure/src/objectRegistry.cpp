@@ -62,29 +62,25 @@ auto ObjectRegistry::registerObject(std::shared_ptr<TreeItem> object) -> void
 
 auto ObjectRegistry::unregisterObject(boost::uuids::uuid const& id) -> void
 {
-  auto it = _p->_objects.find(id);
-  if (it == _p->_objects.end()) {
-    return;
-  }
+  if (auto it = _p->_objects.find(id); it != _p->_objects.end()) {
+    // Disconnect the auto-remove slot so it doesn't fire after explicit removal
+    if (auto locked = it->second.lock()) {
+      QObject::disconnect(locked.get(), &QObject::destroyed, this, nullptr);
+      _p->_reverseMap.erase(locked.get());
+    }
 
-  // Disconnect the auto-remove slot so it doesn't fire after explicit removal
-  if (auto locked = it->second.lock()) {
-    QObject::disconnect(locked.get(), &QObject::destroyed, this, nullptr);
-    _p->_reverseMap.erase(locked.get());
+    _p->_objects.erase(it);
   }
-
-  _p->_objects.erase(it);
 }
 
 // ── Query ─────────────────────────────────────────────────────────────────────
 
 auto ObjectRegistry::findObject(boost::uuids::uuid const& id) const -> std::weak_ptr<TreeItem>
 {
-  auto it = _p->_objects.find(id);
-  if (it == _p->_objects.end()) {
-    return {};
+  if (auto it = _p->_objects.find(id); it != _p->_objects.end()) {
+    return it->second;
   }
-  return it->second;
+  return {};
 }
 
 auto ObjectRegistry::registeredCount() const -> int

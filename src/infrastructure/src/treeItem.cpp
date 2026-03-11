@@ -139,7 +139,7 @@ auto TreeItem::swapChild(std::shared_ptr<TreeItem> oldChild, std::shared_ptr<Tre
 
   _p->disconnectChildSignals(oldChild);
   oldChild->_p->_parent.reset();
-  *it = newChild;
+  _p->_children[index] = newChild;
 
   Q_EMIT childRemoved(index, oldChild);
   Q_EMIT subtreeChildRemoved(shared_from_this(), index, oldChild);

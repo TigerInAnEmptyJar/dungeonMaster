@@ -5,9 +5,11 @@
 #include <QObject>
 #include <QStringList>
 
+#include <array>
+#include <cstddef>
+#include <cstdint>
 #include <iosfwd>
 #include <memory>
-#include <string>
 #include <vector>
 
 namespace infrastructure {
@@ -22,8 +24,12 @@ namespace gurps_system {
  * \brief Abstract base for all format-specific serializers.
  *
  * A Serializer encapsulates one file format (e.g. JSON, XML).  It knows
- * how to detect its own format, what file-dialog filter strings it provides,
- * and how to read/write domain objects from/to a byte stream.
+ * what file-dialog filter strings it provides, and how to read/write domain
+ * objects from/to a byte stream.
+ *
+ * Format detection is done by \c Io::read() by inspecting the fixed-size
+ * binary header that every file starts with.  The header contains the magic
+ * bytes \c "DMFMT", the serializer UUID, and a format version number.
  *
  * The factory needed to create objects during \c read() is passed per-call
  * by \c Io, keeping the Serializer itself stateless.
@@ -38,11 +44,34 @@ class Serializer : public QObject
 public:
   explicit Serializer();
   ~Serializer() override;
-
   Serializer(Serializer const&) = delete;
   auto operator=(Serializer const&) -> Serializer& = delete;
   Serializer(Serializer&&) = delete;
   auto operator=(Serializer&&) -> Serializer& = delete;
+
+  // ── File header ───────────────────────────────────────────────────────────
+
+  /**
+   * \brief Size in bytes of the binary file header.
+   *
+   * Layout:
+   * \code
+   *   Offset  Size  Field
+   *   0       5     Magic ASCII "DMFMT"
+   *   5       16    Serializer UUID (raw bytes, same as id())
+   *   21      2     Format version, big-endian uint16
+   * \endcode
+   */
+  static constexpr std::size_t kHeaderSize = 23;
+
+  /** \brief Fixed-size byte array that holds one file header. */
+  using FileHeader = std::array<std::byte, kHeaderSize>;
+
+  /**
+   * \brief Builds the binary file header for the given serializer \p id and
+   *        \p version.
+   */
+  static auto buildHeader(boost::uuids::uuid const& id, uint16_t version) -> FileHeader;
 
   // ── Identity ──────────────────────────────────────────────────────────────
 
@@ -64,23 +93,14 @@ public:
    */
   virtual auto provides(QString const& filter) const -> bool = 0;
 
-  /**
-   * \brief Returns \c true if this serializer can parse a stream whose
-   *        first line is \p firstLine.
-   *
-   * Used by \c Io::read() for automatic format detection.
-   */
-  virtual auto canRead(std::string const& firstLine) const -> bool = 0;
-
   // ── IO ────────────────────────────────────────────────────────────────────
 
   /**
    * \brief Reads all objects from \p stream.
    *
-   * The stream contains a flat, self-describing collection of objects in the
-   * serializer's own format.  \p firstLine has already been consumed by
-   * \c Io::read() for format detection and is passed verbatim so the
-   * serializer can reconstruct the full document.
+   * \p header and \p version are the values extracted from the 23-byte
+   * binary header already consumed by \c Io::read().  Serializers may use
+   * them to select schema variants or silently migrate old data.
    *
    * Child relationships encoded as UUID references are wired by inserting an
    * \c ItemResolver from \p registry for forward references, or directly via
@@ -91,7 +111,7 @@ public:
    * \returns All top-level objects in the order they appear in the stream.
    *          An empty vector indicates a parse error or empty input.
    */
-  virtual auto read(std::string const& firstLine, std::istream& stream,
+  virtual auto read(FileHeader const& header, uint16_t version, std::istream& stream,
                     infrastructure::ObjectFactory& factory,
                     infrastructure::ObjectRegistry& registry) const
       -> std::vector<std::shared_ptr<infrastructure::TreeItem>> = 0;

@@ -9,8 +9,10 @@ my_add_library(systemIo
   HEADER
     include/serializer.hpp
     include/io.hpp
+    include/jsonSerializer.hpp
   SOURCE
     src/serializer.cpp
     src/io.cpp
+    src/jsonSerializer.cpp
   ALIAS DM::System::Io
 )

@@ -121,8 +121,9 @@ TEST(LinearFormulaTest, ThreeBonusCostsThreeTimesCostPerLevel)
 TEST(LinearFormulaTest, RoundTripLevelBonusThenCpCost)
 {
   LinearFormula f{10};
-  for (int bonus = 0; bonus <= 10; ++bonus)
+  for (int bonus = 0; bonus <= 10; ++bonus) {
     EXPECT_EQ(f.levelBonus(f.cpCost(bonus)), bonus) << "bonus=" << bonus;
+  }
 }
 
 // ── setCostPerLevel ────────────────────────────────────────────────────────────────────
@@ -264,8 +265,9 @@ TEST(LookupFormulaTest, UnmappedBonusThrowsOutOfRange)
 TEST(LookupFormulaTest, RoundTripLevelBonusThenCpCost)
 {
   LookupFormula f{sampleTable};
-  for (int bonus = 0; bonus <= 3; ++bonus)
+  for (int bonus = 0; bonus <= 3; ++bonus) {
     EXPECT_EQ(f.levelBonus(f.cpCost(bonus)), bonus) << "bonus=" << bonus;
+  }
 }
 
 // ── setTable ───────────────────────────────────────────────────────────────────────

@@ -92,8 +92,7 @@ auto ItemResolver::onAddedToParent(std::shared_ptr<TreeItem> /*parent*/) -> void
   // The target may have been registered before we entered the tree – check now.
   // Defer via invokeMethod so that the insertion signals have finished propagating
   // before the swap signals fire.
-  QMetaObject::invokeMethod(
-      this, [this]() { _p->tryResolve(this); }, Qt::QueuedConnection);
+  QMetaObject::invokeMethod(this, [this]() { _p->tryResolve(this); }, Qt::QueuedConnection);
 }
 
 auto ItemResolver::onRemovedFromParent() -> void
