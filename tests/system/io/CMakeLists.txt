@@ -3,9 +3,11 @@ my_add_test(SystemIoTests
   DEPENDS
     DM::System::Io
     Qt6::Core
+    Qt6::Test
   SOURCE
     ioTest.cpp
     jsonSerializerTest.cpp
+    xmlSerializerTest.cpp
   HEADER
     testTypes.hpp
 )

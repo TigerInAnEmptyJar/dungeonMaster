@@ -1,4 +1,4 @@
-#include <jsonSerializer.hpp>
+#include <xmlSerializer.hpp>
 
 #include <objectFactory.hpp>
 #include <objectRegistry.hpp>
@@ -21,17 +21,10 @@
 
 using testing::SizeIs;
 using namespace std::chrono_literals;
-// QCoreApplication is provided by ioTest.cpp (same test binary).
-
-namespace {
-static void processEvents() { QCoreApplication::processEvents(QEventLoop::AllEvents); }
-} // namespace
 
 namespace {
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-auto readAll(gurps_system::JsonSerializer const& s, std::string const& data,
+auto readAll(gurps_system::XmlSerializer const& s, std::string const& data,
              infrastructure::ObjectFactory& factory, infrastructure::ObjectRegistry& registry)
     -> std::vector<std::shared_ptr<infrastructure::TreeItem>>
 {
@@ -61,14 +54,14 @@ auto findByType(std::vector<std::shared_ptr<infrastructure::TreeItem>> const& it
 
 // ── Fixture ───────────────────────────────────────────────────────────────────
 
-class JsonSerializerTest : public ::testing::Test
+class XmlSerializerTest : public ::testing::Test
 {
 protected:
   infrastructure::ObjectFactory factory;
   infrastructure::ObjectRegistry registry;
-  gurps_system::JsonSerializer serializer;
+  gurps_system::XmlSerializer serializer;
 
-  JsonSerializerTest()
+  XmlSerializerTest()
   {
     factory.install(AlphaItem::classId(),
                     [](boost::uuids::uuid id) { return std::make_shared<AlphaItem>(id); });
@@ -83,26 +76,26 @@ protected:
 
 // ── Capabilities ──────────────────────────────────────────────────────────────
 
-TEST_F(JsonSerializerTest, IdIsStable)
+TEST_F(XmlSerializerTest, IdIsStable)
 {
-  EXPECT_EQ(serializer.id(), gurps_system::JsonSerializer::classId());
+  EXPECT_EQ(serializer.id(), gurps_system::XmlSerializer::classId());
 }
 
-TEST_F(JsonSerializerTest, FiltersContainJsonEntries)
+TEST_F(XmlSerializerTest, FiltersContainXmlEntries)
 {
-  EXPECT_TRUE(serializer.filters().contains("GURPS JSON (*.json)"));
-  EXPECT_TRUE(serializer.filters().contains("*.json"));
+  EXPECT_TRUE(serializer.filters().contains("GURPS XML (*.xml)"));
+  EXPECT_TRUE(serializer.filters().contains("*.xml"));
 }
 
-TEST_F(JsonSerializerTest, ProvidesKnownFilter)
+TEST_F(XmlSerializerTest, ProvidesKnownFilter)
 {
-  EXPECT_TRUE(serializer.provides("*.json"));
-  EXPECT_FALSE(serializer.provides("*.xml"));
+  EXPECT_TRUE(serializer.provides("*.xml"));
+  EXPECT_FALSE(serializer.provides("*.json"));
 }
 
 // ── Write ─────────────────────────────────────────────────────────────────────
 
-TEST_F(JsonSerializerTest, WriteEmptyRootsHasMagicHeader)
+TEST_F(XmlSerializerTest, WriteEmptyRootsHasMagicHeader)
 {
   std::ostringstream out;
   serializer.write(out, {});
@@ -111,7 +104,7 @@ TEST_F(JsonSerializerTest, WriteEmptyRootsHasMagicHeader)
   EXPECT_EQ(s.substr(0, 5), "DMFMT");
 }
 
-TEST_F(JsonSerializerTest, WriteSingleItemProducesNonEmptyOutput)
+TEST_F(XmlSerializerTest, WriteSingleItemProducesNonEmptyOutput)
 {
   auto item = std::make_shared<AlphaItem>();
   std::ostringstream out;
@@ -119,7 +112,7 @@ TEST_F(JsonSerializerTest, WriteSingleItemProducesNonEmptyOutput)
   EXPECT_FALSE(out.str().empty());
 }
 
-TEST_F(JsonSerializerTest, WriteSingleItemContainsTypeId)
+TEST_F(XmlSerializerTest, WriteSingleItemContainsTypeId)
 {
   auto item = std::make_shared<AlphaItem>();
   std::ostringstream out;
@@ -127,7 +120,7 @@ TEST_F(JsonSerializerTest, WriteSingleItemContainsTypeId)
   EXPECT_NE(out.str().find("aaaaaaaa-0000-4000-8000-000000000001"), std::string::npos);
 }
 
-TEST_F(JsonSerializerTest, WriteSingleItemContainsObjectId)
+TEST_F(XmlSerializerTest, WriteSingleItemContainsObjectId)
 {
   auto const id = boost::uuids::string_generator{}("11111111-0000-4000-8000-000000000099");
   auto item = std::make_shared<AlphaItem>(id);
@@ -136,9 +129,8 @@ TEST_F(JsonSerializerTest, WriteSingleItemContainsObjectId)
   EXPECT_NE(out.str().find("11111111-0000-4000-8000-000000000099"), std::string::npos);
 }
 
-TEST_F(JsonSerializerTest, WriteTreeIncludesChildInFlatList)
+TEST_F(XmlSerializerTest, WriteTreeIncludesChildInFlatList)
 {
-  // root(Alpha) → child(Beta): both must appear in the output
   auto root = std::make_shared<AlphaItem>();
   auto child = std::make_shared<BetaItem>();
   root->insertChild(0, child);
@@ -150,9 +142,8 @@ TEST_F(JsonSerializerTest, WriteTreeIncludesChildInFlatList)
   EXPECT_NE(out.str().find("bbbbbbbb-0000-4000-8000-000000000002"), std::string::npos);
 }
 
-TEST_F(JsonSerializerTest, WriteDeduplicatesSharedChild)
+TEST_F(XmlSerializerTest, WriteDeduplicatesSharedChild)
 {
-  // Two Alpha roots sharing one Beta child → output must contain Beta only once
   auto child = std::make_shared<BetaItem>();
   auto root1 = std::make_shared<AlphaItem>();
   auto root2 = std::make_shared<AlphaItem>();
@@ -162,7 +153,6 @@ TEST_F(JsonSerializerTest, WriteDeduplicatesSharedChild)
   std::ostringstream out;
   serializer.write(out, {root1, root2});
 
-  // Count occurrences of BetaItem's typeId UUID in the output
   auto const& str = out.str();
   auto const typeStr = std::string{"bbbbbbbb-0000-4000-8000-000000000002"};
   std::size_t count = 0;
@@ -174,7 +164,7 @@ TEST_F(JsonSerializerTest, WriteDeduplicatesSharedChild)
   EXPECT_EQ(count, 1u);
 }
 
-TEST_F(JsonSerializerTest, WriteSerializesStringProperty)
+TEST_F(XmlSerializerTest, WriteSerializesStringProperty)
 {
   auto item = std::make_shared<AlphaItem>();
   item->setName("Alice");
@@ -184,7 +174,7 @@ TEST_F(JsonSerializerTest, WriteSerializesStringProperty)
   EXPECT_NE(out.str().find("QString"), std::string::npos);
 }
 
-TEST_F(JsonSerializerTest, WriteSerializesIntProperty)
+TEST_F(XmlSerializerTest, WriteSerializesIntProperty)
 {
   auto item = std::make_shared<AlphaItem>();
   item->setLevel(42);
@@ -194,7 +184,7 @@ TEST_F(JsonSerializerTest, WriteSerializesIntProperty)
   EXPECT_NE(out.str().find("int"), std::string::npos);
 }
 
-TEST_F(JsonSerializerTest, WriteSerializesStringListProperty)
+TEST_F(XmlSerializerTest, WriteSerializesStringListProperty)
 {
   auto item = std::make_shared<BetaItem>();
   item->setTags({"warrior", "ranger"});
@@ -207,108 +197,99 @@ TEST_F(JsonSerializerTest, WriteSerializesStringListProperty)
 
 // ── Read ──────────────────────────────────────────────────────────────────────
 
-TEST_F(JsonSerializerTest, ReadEmptyArrayReturnsEmpty)
+TEST_F(XmlSerializerTest, ReadEmptyItemsElementReturnsEmpty)
 {
-  std::istringstream stream{"[\n]"};
+  std::istringstream stream{R"(<items/>)"};
   gurps_system::Serializer::FileHeader header{};
   EXPECT_TRUE(serializer.read(header, 1, stream, factory, registry).empty());
 }
 
-TEST_F(JsonSerializerTest, ReadMalformedJsonReturnsEmpty)
+TEST_F(XmlSerializerTest, ReadMalformedXmlReturnsEmpty)
 {
-  std::istringstream stream{"not valid json"};
+  std::istringstream stream{"not valid xml"};
   gurps_system::Serializer::FileHeader header{};
   EXPECT_TRUE(serializer.read(header, 1, stream, factory, registry).empty());
 }
 
-TEST_F(JsonSerializerTest, ReadJsonObjectRootReturnsEmpty)
+TEST_F(XmlSerializerTest, ReadXmlDocumentWithWrongRootReturnsEmpty)
 {
-  std::istringstream stream{R"({"key": 1})"};
+  std::istringstream stream{R"(<foo></foo>)"};
   gurps_system::Serializer::FileHeader header{};
   EXPECT_TRUE(serializer.read(header, 1, stream, factory, registry).empty());
 }
 
-TEST_F(JsonSerializerTest, ReadSingleItemReturnsOneObject)
+TEST_F(XmlSerializerTest, ReadSingleItemReturnsOneObject)
 {
-  auto const json = R"([
-    { "typeId": "aaaaaaaa-0000-4000-8000-000000000001",
-      "objectId": "cccccccc-0000-4000-8000-000000000003", 
-      "root": true }
-  ])";
-  std::istringstream stream{json};
+  auto const xmlData = R"(<items>)"
+                       R"(<item typeId="aaaaaaaa-0000-4000-8000-000000000001" )"
+                       R"(objectId="cccccccc-0000-4000-8000-000000000003" root="true"/>)"
+                       R"(</items>)";
+  std::istringstream stream{xmlData};
   gurps_system::Serializer::FileHeader header{};
   auto items = serializer.read(header, 1, stream, factory, registry);
   EXPECT_EQ(items.size(), 1u);
 }
 
-TEST_F(JsonSerializerTest, ReadRestoresCorrectTypeId)
+TEST_F(XmlSerializerTest, ReadRestoresCorrectTypeId)
 {
-  auto const json = R"([
-    { "typeId": "aaaaaaaa-0000-4000-8000-000000000001",
-      "objectId": "cccccccc-0000-4000-8000-000000000003", 
-      "root": true }
-  ])";
-  std::istringstream stream{json};
+  auto const xmlData = R"(<items>)"
+                       R"(<item typeId="aaaaaaaa-0000-4000-8000-000000000001" )"
+                       R"(objectId="cccccccc-0000-4000-8000-000000000003" root="true"/>)"
+                       R"(</items>)";
+  std::istringstream stream{xmlData};
   gurps_system::Serializer::FileHeader header{};
   auto items = serializer.read(header, 1, stream, factory, registry);
   ASSERT_EQ(items.size(), 1u);
   EXPECT_EQ(items[0]->typeId(), AlphaItem::classId());
 }
 
-TEST_F(JsonSerializerTest, ReadRestoresCorrectObjectId)
+TEST_F(XmlSerializerTest, ReadRestoresCorrectObjectId)
 {
   auto const expected = boost::uuids::string_generator{}("cccccccc-0000-4000-8000-000000000003");
-  auto const json = R"([
-    { "typeId": "aaaaaaaa-0000-4000-8000-000000000001",
-      "objectId": "cccccccc-0000-4000-8000-000000000003", 
-      "root": true }
-  ])";
-  std::istringstream stream{json};
+  auto const xmlData = R"(<items>)"
+                       R"(<item typeId="aaaaaaaa-0000-4000-8000-000000000001" )"
+                       R"(objectId="cccccccc-0000-4000-8000-000000000003" root="true"/>)"
+                       R"(</items>)";
+  std::istringstream stream{xmlData};
   gurps_system::Serializer::FileHeader header{};
   auto items = serializer.read(header, 1, stream, factory, registry);
   ASSERT_EQ(items.size(), 1u);
   EXPECT_EQ(items[0]->objectId(), expected);
 }
 
-TEST_F(JsonSerializerTest, ReadRegistersItemInRegistry)
+TEST_F(XmlSerializerTest, ReadRegistersItemInRegistry)
 {
   auto const expected = boost::uuids::string_generator{}("cccccccc-0000-4000-8000-000000000003");
-  auto const json = R"([
-    { "typeId": "aaaaaaaa-0000-4000-8000-000000000001",
-      "objectId": "cccccccc-0000-4000-8000-000000000003", 
-      "root": true }
-  ])";
-  std::istringstream stream{json};
+  auto const xmlData = R"(<items>)"
+                       R"(<item typeId="aaaaaaaa-0000-4000-8000-000000000001" )"
+                       R"(objectId="cccccccc-0000-4000-8000-000000000003" root="true"/>)"
+                       R"(</items>)";
+  std::istringstream stream{xmlData};
   gurps_system::Serializer::FileHeader header{};
   auto items = serializer.read(header, 1, stream, factory, registry); // keep shared_ptrs alive
   EXPECT_FALSE(registry.findObject(expected).expired());
 }
 
-TEST_F(JsonSerializerTest, ReadSkipsEntryWithUnknownTypeId)
+TEST_F(XmlSerializerTest, ReadSkipsEntryWithUnknownTypeId)
 {
-  // Unknown typeId: factory can't create it → entry silently skipped
-  auto const json = R"([
-    { "typeId": "00000000-0000-4000-8000-000000000000",
-      "objectId": "cccccccc-0000-4000-8000-000000000003", 
-      "root": true }
-  ])";
-  std::istringstream stream{json};
+  auto const xmlData = R"(<items>)"
+                       R"(<item typeId="00000000-0000-4000-8000-000000000000" )"
+                       R"(objectId="cccccccc-0000-4000-8000-000000000003" root="true"/>)"
+                       R"(</items>)";
+  std::istringstream stream{xmlData};
   gurps_system::Serializer::FileHeader header{};
   auto items = serializer.read(header, 1, stream, factory, registry);
   EXPECT_TRUE(items.empty());
 }
 
-TEST_F(JsonSerializerTest, ReadTwoItemsReturnsBoth)
+TEST_F(XmlSerializerTest, ReadTwoItemsReturnsBoth)
 {
-  auto const json = R"([
-    { "typeId": "aaaaaaaa-0000-4000-8000-000000000001",
-      "objectId": "cccccccc-0000-4000-8000-000000000003", 
-      "root": true },
-    { "typeId": "bbbbbbbb-0000-4000-8000-000000000002",
-      "objectId": "dddddddd-0000-4000-8000-000000000004", 
-      "root": true }
-  ])";
-  std::istringstream stream{json};
+  auto const xmlData =
+      R"(<items>)"
+      R"(<item typeId="aaaaaaaa-0000-4000-8000-000000000001" objectId="cccccccc-0000-4000-8000-000000000003" root="true"/>)"
+      R"(<item typeId="bbbbbbbb-0000-4000-8000-000000000002" objectId="eeeeeeee-0000-4000-8000-000000000005" root="true"/>)"
+      R"(</items>)";
+  std::istringstream stream{xmlData};
   gurps_system::Serializer::FileHeader header{};
   auto items = serializer.read(header, 1, stream, factory, registry);
   EXPECT_EQ(items.size(), 2u);
@@ -318,7 +299,7 @@ TEST_F(JsonSerializerTest, ReadTwoItemsReturnsBoth)
 
 // ── Round-trip ────────────────────────────────────────────────────────────────
 
-TEST_F(JsonSerializerTest, RoundTripPreservesTypeId)
+TEST_F(XmlSerializerTest, RoundTripPreservesTypeId)
 {
   auto original = std::make_shared<AlphaItem>();
   std::ostringstream out;
@@ -330,7 +311,7 @@ TEST_F(JsonSerializerTest, RoundTripPreservesTypeId)
   EXPECT_EQ(items[0]->typeId(), AlphaItem::classId());
 }
 
-TEST_F(JsonSerializerTest, RoundTripPreservesObjectId)
+TEST_F(XmlSerializerTest, RoundTripPreservesObjectId)
 {
   auto original = std::make_shared<AlphaItem>();
   auto const originalId = original->objectId();
@@ -343,9 +324,8 @@ TEST_F(JsonSerializerTest, RoundTripPreservesObjectId)
   EXPECT_EQ(items[0]->objectId(), originalId);
 }
 
-TEST_F(JsonSerializerTest, RoundTripRestoresTreeStructure)
+TEST_F(XmlSerializerTest, RoundTripRestoresTreeStructure)
 {
-  // Write root → child; read back yields 1 root with 1 child already wired.
   auto root = std::make_shared<AlphaItem>();
   auto child = std::make_shared<BetaItem>();
   root->insertChild(0, child);
@@ -362,11 +342,8 @@ TEST_F(JsonSerializerTest, RoundTripRestoresTreeStructure)
   EXPECT_EQ(roots[0]->childAt(0)->objectId(), child->objectId());
 }
 
-TEST_F(JsonSerializerTest, RoundTripSharedChildBelongsToFirstParent)
+TEST_F(XmlSerializerTest, RoundTripSharedChildBelongsToFirstParent)
 {
-  // A shared child is claimed in the file by the first DFS-visited parent.
-  // After round-trip both roots are returned; the child lives under exactly
-  // one of them (total child count across both roots == 1).
   auto shared = std::make_shared<BetaItem>();
   auto root1 = std::make_shared<AlphaItem>();
   auto root2 = std::make_shared<AlphaItem>();
@@ -384,7 +361,7 @@ TEST_F(JsonSerializerTest, RoundTripSharedChildBelongsToFirstParent)
   EXPECT_EQ(roots[0]->childAt(0), roots[1]->childAt(0));
 }
 
-TEST_F(JsonSerializerTest, RoundTripSharedChildObjectIdIsPreserved)
+TEST_F(XmlSerializerTest, RoundTripSharedChildObjectIdIsPreserved)
 {
   auto shared = std::make_shared<BetaItem>();
   auto const sharedId = shared->objectId();
@@ -400,7 +377,6 @@ TEST_F(JsonSerializerTest, RoundTripSharedChildObjectIdIsPreserved)
   auto roots = readAll(serializer, out.str(), factory, reg2);
   ASSERT_EQ(roots.size(), 2u);
 
-  // Find the root that ended up with the child
   std::shared_ptr<infrastructure::TreeItem> foundChild;
   for (auto const& root : roots) {
     if (root->size() > 0) {
@@ -413,9 +389,9 @@ TEST_F(JsonSerializerTest, RoundTripSharedChildObjectIdIsPreserved)
   EXPECT_EQ(foundChild->typeId(), BetaItem::classId());
 }
 
-// ── Property round-trips ────────────────────────────────────────────────────────────────
+// ── Property round-trips ──────────────────────────────────────────────────────
 
-TEST_F(JsonSerializerTest, RoundTripPreservesStringProperty)
+TEST_F(XmlSerializerTest, RoundTripPreservesStringProperty)
 {
   auto original = std::make_shared<AlphaItem>();
   original->setName("Aragorn");
@@ -430,7 +406,7 @@ TEST_F(JsonSerializerTest, RoundTripPreservesStringProperty)
   EXPECT_EQ(restored->name(), "Aragorn");
 }
 
-TEST_F(JsonSerializerTest, RoundTripPreservesIntProperty)
+TEST_F(XmlSerializerTest, RoundTripPreservesIntProperty)
 {
   auto original = std::make_shared<AlphaItem>();
   original->setLevel(7);
@@ -445,7 +421,7 @@ TEST_F(JsonSerializerTest, RoundTripPreservesIntProperty)
   EXPECT_EQ(restored->level(), 7);
 }
 
-TEST_F(JsonSerializerTest, RoundTripPreservesStringListProperty)
+TEST_F(XmlSerializerTest, RoundTripPreservesStringListProperty)
 {
   auto original = std::make_shared<BetaItem>();
   original->setTags({"fighter", "mage"});
@@ -460,7 +436,7 @@ TEST_F(JsonSerializerTest, RoundTripPreservesStringListProperty)
   EXPECT_EQ(restored->tags(), QStringList({"fighter", "mage"}));
 }
 
-TEST_F(JsonSerializerTest, RoundTripPreservesInheritedAndOwnProperties)
+TEST_F(XmlSerializerTest, RoundTripPreservesInheritedAndOwnProperties)
 {
   auto original = std::make_shared<GammaItem>();
   original->setName("Legolas");
@@ -480,7 +456,7 @@ TEST_F(JsonSerializerTest, RoundTripPreservesInheritedAndOwnProperties)
   EXPECT_EQ(restored->title(), "Elven Lord");
 }
 
-TEST_F(JsonSerializerTest, WriteThrowsForUnsupportedPropertyType)
+TEST_F(XmlSerializerTest, WriteThrowsForUnsupportedPropertyType)
 {
   auto item = std::make_shared<DeltaItem>();
   item->setScore(DeltaItem::ItemType::Beta);
@@ -488,22 +464,23 @@ TEST_F(JsonSerializerTest, WriteThrowsForUnsupportedPropertyType)
   EXPECT_THROW(serializer.write(out, {item}), std::invalid_argument);
 }
 
-TEST_F(JsonSerializerTest, ReadThrowsForUnsupportedPropertyType)
+TEST_F(XmlSerializerTest, ReadThrowsForUnsupportedPropertyType)
 {
   auto const headerBytes =
-      gurps_system::Serializer::buildHeader(gurps_system::JsonSerializer::classId(), 1);
+      gurps_system::Serializer::buildHeader(gurps_system::XmlSerializer::classId(), 1);
   std::string data(reinterpret_cast<char const*>(headerBytes.data()),
                    gurps_system::Serializer::kHeaderSize);
-  // Craft a JSON entry with a "double" property, which has no registered codec.
-  data += R"([{"typeId":"dddddddd-0000-4000-8000-000000000004",)"
-          R"("objectId":"eeeeeeee-0000-4000-8000-000000000005",)"
-          R"("properties":{"score":{"type":"NoneExistingType","value":"Alpha"}}}])";
+  data +=
+      R"(<items>)"
+      R"(<item typeId="dddddddd-0000-4000-8000-000000000004" objectId="eeeeeeee-0000-4000-8000-000000000005">)"
+      R"(<properties><property name="score" type="NoneExistingType">Alpha</property></properties>)"
+      R"(</item></items>)";
 
   infrastructure::ObjectRegistry reg2;
   EXPECT_THROW(readAll(serializer, data, factory, reg2), std::invalid_argument);
 }
 
-TEST_F(JsonSerializerTest, RoundTripSharedChildAlsoTopLevel)
+TEST_F(XmlSerializerTest, RoundTripSharedChildAlsoTopLevel)
 {
   // shared is a child of both root1 and root2, AND explicitly a top-level root.
   // After round-trip: 3 roots returned; both alpha roots have shared as child
