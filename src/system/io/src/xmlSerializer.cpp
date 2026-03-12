@@ -99,6 +99,24 @@ auto propCodecs() -> std::unordered_map<std::string, XmlPropCodec> const&
           }
           return QVariant::fromValue(table); // reader AT </property>
         }}},
+      {"QList<int>",
+       {[](QXmlStreamWriter& xml, QVariant const& v) {
+          auto const list = v.value<QList<int>>();
+          for (int x : list) {
+            xml.writeTextElement(QStringLiteral("entry"), QString::number(x));
+          }
+        },
+        [](QXmlStreamReader& xml) -> QVariant {
+          QList<int> list;
+          while (xml.readNextStartElement()) { // inside <property>
+            if (xml.name() == QLatin1String("entry")) {
+              list.append(xml.readElementText().toInt()); // leaves AT </entry>
+            } else {
+              xml.skipCurrentElement();
+            }
+          }
+          return QVariant::fromValue(list); // reader AT </property>
+        }}},
   };
   return kTable;
 }

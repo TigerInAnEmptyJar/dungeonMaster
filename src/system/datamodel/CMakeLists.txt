@@ -11,15 +11,27 @@ my_add_library(systemDatamodel
     include/attribute.hpp
     include/cpTable.hpp
     include/registration.hpp
+    include/secondaryAttribute.hpp
     src/formula.hpp
     src/linearFormula.hpp
     src/lookupFormula.hpp
+    src/parentRef.hpp
+    src/derivationFormula.hpp
+    src/scaledSumDerivationFormula.hpp
+    src/quadraticDerivationFormula.hpp
+    src/lookupDerivationFormula.hpp
   SOURCE
     src/baseObject.cpp
     src/formula.cpp
     src/linearFormula.cpp
     src/lookupFormula.cpp
     src/attribute.cpp
+    src/parentRef.cpp
+    src/derivationFormula.cpp
+    src/scaledSumDerivationFormula.cpp
+    src/quadraticDerivationFormula.cpp
+    src/lookupDerivationFormula.cpp
+    src/secondaryAttribute.cpp
     src/registration.cpp
   ALIAS DM::System::Datamodel
 )

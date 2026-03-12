@@ -6,6 +6,7 @@
 #include <boost/uuid/string_generator.hpp>
 #include <boost/uuid/uuid.hpp>
 
+#include <QList>
 #include <QString>
 #include <QStringList>
 
@@ -131,4 +132,31 @@ public:
 
 private:
   gurps_system::CpTable _table{};
+};
+
+class ZetaItem : public infrastructure::TreeItem
+{
+  Q_OBJECT
+  Q_PROPERTY(QList<int> values READ values WRITE setValues)
+public:
+  explicit ZetaItem(boost::uuids::uuid id = {}) : TreeItem(id)
+  {
+    static bool const reg [[maybe_unused]] = [] {
+      qRegisterMetaType<QList<int>>();
+      return true;
+    }();
+  }
+
+  auto values() const -> QList<int> { return _values; }
+  auto setValues(QList<int> value) -> void { _values = std::move(value); }
+
+  static auto classId() -> boost::uuids::uuid
+  {
+    static auto const id = boost::uuids::string_generator{}("ffffffff-0000-4000-8000-000000000006");
+    return id;
+  }
+  auto typeId() const -> boost::uuids::uuid override { return classId(); }
+
+private:
+  QList<int> _values{};
 };

@@ -73,6 +73,8 @@ protected:
                     [](boost::uuids::uuid id) { return std::make_shared<DeltaItem>(id); });
     factory.install(EpsilonItem::classId(),
                     [](boost::uuids::uuid id) { return std::make_shared<EpsilonItem>(id); });
+    factory.install(ZetaItem::classId(),
+                    [](boost::uuids::uuid id) { return std::make_shared<ZetaItem>(id); });
   }
 };
 
@@ -542,4 +544,34 @@ TEST_F(XmlSerializerTest, RoundTripPreservesCpTableProperty)
   auto* restored = qobject_cast<EpsilonItem*>(items[0].get());
   ASSERT_NE(restored, nullptr);
   EXPECT_EQ(restored->table(), original);
+}
+
+// ── QList<int> property ───────────────────────────────────────────────────────
+
+TEST_F(XmlSerializerTest, WriteSerializesQListIntProperty)
+{
+  auto item = std::make_shared<ZetaItem>();
+  item->setValues({1, 2, 3, 5, 8});
+  std::ostringstream out;
+  serializer.write(out, {item});
+  auto const& s = out.str();
+  EXPECT_NE(s.find("QList"), std::string::npos); // type attr
+  EXPECT_NE(s.find("<entry>"), std::string::npos);
+}
+
+TEST_F(XmlSerializerTest, RoundTripPreservesQListIntProperty)
+{
+  QList<int> const original{10, 20, 30, 40};
+  auto item = std::make_shared<ZetaItem>();
+  item->setValues(original);
+
+  std::ostringstream out;
+  serializer.write(out, {item});
+
+  infrastructure::ObjectRegistry reg2;
+  auto items = readAll(serializer, out.str(), factory, reg2);
+  ASSERT_EQ(items.size(), 1u);
+  auto* restored = qobject_cast<ZetaItem*>(items[0].get());
+  ASSERT_NE(restored, nullptr);
+  EXPECT_EQ(restored->values(), original);
 }

@@ -90,6 +90,22 @@ auto propCodecs() -> std::unordered_map<std::string, PropCodec> const&
           }
           return QVariant::fromValue(table);
         }}},
+      {"QList<int>",
+       {[](QVariant const& v) -> QJsonValue {
+          auto const list = v.value<QList<int>>();
+          QJsonArray a;
+          for (int x : list) {
+            a.append(x);
+          }
+          return a;
+        },
+        [](QJsonValue const& j) -> QVariant {
+          QList<int> list;
+          for (auto const& e : j.toArray()) {
+            list.append(e.toInt());
+          }
+          return QVariant::fromValue(list);
+        }}},
   };
   return kTable;
 }

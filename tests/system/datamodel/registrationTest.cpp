@@ -1,9 +1,15 @@
 #include <registration.hpp>
 
 #include <attribute.hpp>
+#include <derivationFormula.hpp>
 #include <linearFormula.hpp>
+#include <lookupDerivationFormula.hpp>
 #include <lookupFormula.hpp>
 #include <objectFactory.hpp>
+#include <parentRef.hpp>
+#include <quadraticDerivationFormula.hpp>
+#include <scaledSumDerivationFormula.hpp>
+#include <secondaryAttribute.hpp>
 
 #include <boost/uuid/string_generator.hpp>
 
@@ -41,7 +47,32 @@ TEST_F(RegistrationTest, LookupFormulaIsRegistered)
   EXPECT_TRUE(factory.isInstalled(LookupFormula::classId()));
 }
 
-TEST_F(RegistrationTest, AllThreeTypesRegistered) { EXPECT_EQ(factory.installedCount(), 3); }
+TEST_F(RegistrationTest, SecondaryAttributeIsRegistered)
+{
+  EXPECT_TRUE(factory.isInstalled(SecondaryAttribute::classId()));
+}
+
+TEST_F(RegistrationTest, ParentRefIsRegistered)
+{
+  EXPECT_TRUE(factory.isInstalled(ParentRef::classId()));
+}
+
+TEST_F(RegistrationTest, ScaledSumDerivationFormulaIsRegistered)
+{
+  EXPECT_TRUE(factory.isInstalled(ScaledSumDerivationFormula::classId()));
+}
+
+TEST_F(RegistrationTest, QuadraticDerivationFormulaIsRegistered)
+{
+  EXPECT_TRUE(factory.isInstalled(QuadraticDerivationFormula::classId()));
+}
+
+TEST_F(RegistrationTest, LookupDerivationFormulaIsRegistered)
+{
+  EXPECT_TRUE(factory.isInstalled(LookupDerivationFormula::classId()));
+}
+
+TEST_F(RegistrationTest, AllEightTypesRegistered) { EXPECT_EQ(factory.installedCount(), 8); }
 
 // ── Factory creation ──────────────────────────────────────────────────────────
 
@@ -75,10 +106,40 @@ TEST_F(RegistrationTest, CreateLookupFormulaReturnsLookupFormula)
   EXPECT_NE(dynamic_cast<LookupFormula*>(obj.get()), nullptr);
 }
 
+TEST_F(RegistrationTest, CreateSecondaryAttributeReturnsSecondaryAttribute)
+{
+  auto obj = factory.create(SecondaryAttribute::classId());
+  EXPECT_NE(dynamic_cast<SecondaryAttribute*>(obj.get()), nullptr);
+}
+
+TEST_F(RegistrationTest, CreateParentRefReturnsParentRef)
+{
+  auto obj = factory.create(ParentRef::classId());
+  EXPECT_NE(dynamic_cast<ParentRef*>(obj.get()), nullptr);
+}
+
+TEST_F(RegistrationTest, CreateScaledSumDerivationFormulaReturnsCorrectType)
+{
+  auto obj = factory.create(ScaledSumDerivationFormula::classId());
+  EXPECT_NE(dynamic_cast<ScaledSumDerivationFormula*>(obj.get()), nullptr);
+}
+
+TEST_F(RegistrationTest, CreateQuadraticDerivationFormulaReturnsCorrectType)
+{
+  auto obj = factory.create(QuadraticDerivationFormula::classId());
+  EXPECT_NE(dynamic_cast<QuadraticDerivationFormula*>(obj.get()), nullptr);
+}
+
+TEST_F(RegistrationTest, CreateLookupDerivationFormulaReturnsCorrectType)
+{
+  auto obj = factory.create(LookupDerivationFormula::classId());
+  EXPECT_NE(dynamic_cast<LookupDerivationFormula*>(obj.get()), nullptr);
+}
+
 // ── Idempotency / double-registration ────────────────────────────────────────
 
 TEST_F(RegistrationTest, CallingRegisterTwiceDoesNotAddDuplicates)
 {
   registerSystemObjects(factory); // second call — install() returns false, no throw
-  EXPECT_EQ(factory.installedCount(), 3);
+  EXPECT_EQ(factory.installedCount(), 8);
 }

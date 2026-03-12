@@ -1,8 +1,14 @@
 #include <registration.hpp>
 
 #include <attribute.hpp>
+#include <derivationFormula.hpp>
 #include <linearFormula.hpp>
+#include <lookupDerivationFormula.hpp>
 #include <lookupFormula.hpp>
+#include <parentRef.hpp>
+#include <quadraticDerivationFormula.hpp>
+#include <scaledSumDerivationFormula.hpp>
+#include <secondaryAttribute.hpp>
 
 namespace gurps_system {
 
@@ -18,6 +24,27 @@ void registerSystemObjects(infrastructure::ObjectFactory& factory)
   // {0,0} is the required sentinel entry; overwritten by the serializer.
   factory.install(LookupFormula::classId(), [](boost::uuids::uuid id) {
     return std::make_shared<LookupFormula>(std::map<int, int>{{0, 0}}, id);
+  });
+
+  factory.install(SecondaryAttribute::classId(),
+                  [](boost::uuids::uuid id) { return std::make_shared<SecondaryAttribute>(id); });
+
+  factory.install(ParentRef::classId(),
+                  [](boost::uuids::uuid id) { return std::make_shared<ParentRef>(id); });
+
+  // coefficients={1}/divisor=1 is the minimal valid value; overwritten by the serializer.
+  factory.install(ScaledSumDerivationFormula::classId(), [](boost::uuids::uuid id) {
+    return std::make_shared<ScaledSumDerivationFormula>(QList<int>{1}, 1, id);
+  });
+
+  // divisor=1 is the minimal valid value; overwritten by the serializer.
+  factory.install(QuadraticDerivationFormula::classId(), [](boost::uuids::uuid id) {
+    return std::make_shared<QuadraticDerivationFormula>(1, id);
+  });
+
+  // {0,0} is the minimal valid entry; overwritten by the serializer.
+  factory.install(LookupDerivationFormula::classId(), [](boost::uuids::uuid id) {
+    return std::make_shared<LookupDerivationFormula>(std::map<int, int>{{0, 0}}, id);
   });
 }
 

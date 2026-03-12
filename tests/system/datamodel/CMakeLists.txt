@@ -9,5 +9,7 @@ my_add_test(SystemDatamodelTests
     baseObjectTest.cpp
     formulaTest.cpp
     attributeTest.cpp
+    derivationFormulaTest.cpp
+    secondaryAttributeTest.cpp
     registrationTest.cpp
 )
