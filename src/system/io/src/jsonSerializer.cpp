@@ -1,5 +1,6 @@
 #include <jsonSerializer.hpp>
 
+#include <cpTable.hpp>
 #include <itemResolver.hpp>
 #include <objectFactory.hpp>
 #include <objectRegistry.hpp>
@@ -71,6 +72,23 @@ auto propCodecs() -> std::unordered_map<std::string, PropCodec> const&
             sl.append(sv.toString());
           }
           return sl;
+        }}},
+      {"std::map<int,int>",
+       {[](QVariant const& v) -> QJsonValue {
+          auto const table = v.value<gurps_system::CpTable>();
+          QJsonObject obj;
+          for (auto const& [key, val] : table) {
+            obj[QString::number(key)] = val;
+          }
+          return obj;
+        },
+        [](QJsonValue const& j) -> QVariant {
+          gurps_system::CpTable table;
+          auto const obj = j.toObject();
+          for (auto it = obj.constBegin(); it != obj.constEnd(); ++it) {
+            table.emplace(it.key().toInt(), it.value().toInt());
+          }
+          return QVariant::fromValue(table);
         }}},
   };
   return kTable;

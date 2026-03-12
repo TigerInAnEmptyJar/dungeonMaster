@@ -1,5 +1,6 @@
 #include <xmlSerializer.hpp>
 
+#include <cpTable.hpp>
 #include <itemResolver.hpp>
 #include <objectFactory.hpp>
 #include <objectRegistry.hpp>
@@ -73,6 +74,30 @@ auto propCodecs() -> std::unordered_map<std::string, XmlPropCodec> const&
             }
           }
           return sl; // readNextStartElement hit </property>; reader AT </property>
+        }}},
+      {"std::map<int,int>",
+       {[](QXmlStreamWriter& xml, QVariant const& v) {
+          auto const table = v.value<gurps_system::CpTable>();
+          for (auto const& [key, val] : table) {
+            xml.writeStartElement(QStringLiteral("entry"));
+            xml.writeAttribute(QStringLiteral("key"), QString::number(key));
+            xml.writeAttribute(QStringLiteral("value"), QString::number(val));
+            xml.writeEndElement();
+          }
+        },
+        [](QXmlStreamReader& xml) -> QVariant {
+          gurps_system::CpTable table;
+          while (xml.readNextStartElement()) { // inside <property>
+            if (xml.name() == QLatin1String("entry")) {
+              auto const key = xml.attributes().value(QStringLiteral("key")).toInt();
+              auto const val = xml.attributes().value(QStringLiteral("value")).toInt();
+              xml.skipCurrentElement(); // consume <entry/>
+              table.emplace(key, val);
+            } else {
+              xml.skipCurrentElement();
+            }
+          }
+          return QVariant::fromValue(table); // reader AT </property>
         }}},
   };
   return kTable;

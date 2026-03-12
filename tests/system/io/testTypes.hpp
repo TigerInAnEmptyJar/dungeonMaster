@@ -1,6 +1,8 @@
 #pragma once
 #include <treeItem.hpp>
 
+#include <cpTable.hpp>
+
 #include <boost/uuid/string_generator.hpp>
 #include <boost/uuid/uuid.hpp>
 
@@ -102,4 +104,31 @@ public:
 
 private:
   ItemType _score{ItemType::Alpha};
+};
+
+class EpsilonItem : public infrastructure::TreeItem
+{
+  Q_OBJECT
+  Q_PROPERTY(gurps_system::CpTable table READ table WRITE setTable)
+public:
+  explicit EpsilonItem(boost::uuids::uuid id = {}) : TreeItem(id)
+  {
+    static bool const reg [[maybe_unused]] = [] {
+      qRegisterMetaType<gurps_system::CpTable>();
+      return true;
+    }();
+  }
+
+  auto table() const -> gurps_system::CpTable { return _table; }
+  auto setTable(gurps_system::CpTable value) -> void { _table = std::move(value); }
+
+  static auto classId() -> boost::uuids::uuid
+  {
+    static auto const id = boost::uuids::string_generator{}("eeeeeeee-0000-4000-8000-000000000005");
+    return id;
+  }
+  auto typeId() const -> boost::uuids::uuid override { return classId(); }
+
+private:
+  gurps_system::CpTable _table{};
 };

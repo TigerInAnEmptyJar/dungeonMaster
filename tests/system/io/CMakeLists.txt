@@ -2,12 +2,13 @@ my_add_test(SystemIoTests
   AUTOMOC
   DEPENDS
     DM::System::Io
+    DM::System::Datamodel
     Qt6::Core
-    Qt6::Test
   SOURCE
     ioTest.cpp
     jsonSerializerTest.cpp
     xmlSerializerTest.cpp
+    registrationRoundTripTest.cpp
   HEADER
     testTypes.hpp
 )

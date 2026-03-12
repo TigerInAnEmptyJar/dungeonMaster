@@ -71,6 +71,8 @@ protected:
                     [](boost::uuids::uuid id) { return std::make_shared<GammaItem>(id); });
     factory.install(DeltaItem::classId(),
                     [](boost::uuids::uuid id) { return std::make_shared<DeltaItem>(id); });
+    factory.install(EpsilonItem::classId(),
+                    [](boost::uuids::uuid id) { return std::make_shared<EpsilonItem>(id); });
   }
 };
 
@@ -509,4 +511,35 @@ TEST_F(XmlSerializerTest, RoundTripSharedChildAlsoTopLevel)
   ASSERT_THAT(*roots.at(2), SizeIs(1));
   EXPECT_EQ(roots.at(2)->childAt(0)->objectId(), sharedId);
   EXPECT_EQ(roots.at(1)->childAt(0), roots.at(2)->childAt(0));
+}
+
+// ── CpTable property ──────────────────────────────────────────────────────────
+
+TEST_F(XmlSerializerTest, WriteSerializesCpTableProperty)
+{
+  auto item = std::make_shared<EpsilonItem>();
+  item->setTable({{0, 0}, {1, 10}, {2, 25}});
+  std::ostringstream out;
+  serializer.write(out, {item});
+  auto const& s = out.str();
+  EXPECT_NE(s.find("std::map"), std::string::npos); // type attr (angle brackets are XML-escaped)
+  EXPECT_NE(s.find("key=\""), std::string::npos);
+  EXPECT_NE(s.find("value=\""), std::string::npos);
+}
+
+TEST_F(XmlSerializerTest, RoundTripPreservesCpTableProperty)
+{
+  gurps_system::CpTable const original{{0, 0}, {1, 10}, {2, 25}, {3, 45}};
+  auto item = std::make_shared<EpsilonItem>();
+  item->setTable(original);
+
+  std::ostringstream out;
+  serializer.write(out, {item});
+
+  infrastructure::ObjectRegistry reg2;
+  auto items = readAll(serializer, out.str(), factory, reg2);
+  ASSERT_EQ(items.size(), 1u);
+  auto* restored = qobject_cast<EpsilonItem*>(items[0].get());
+  ASSERT_NE(restored, nullptr);
+  EXPECT_EQ(restored->table(), original);
 }

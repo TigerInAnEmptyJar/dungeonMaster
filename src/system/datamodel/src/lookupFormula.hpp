@@ -1,12 +1,9 @@
 #pragma once
 
+#include <cpTable.hpp>
 #include <formula.hpp>
 
-#include <map>
-
 namespace gurps_system {
-
-using CpTable = std::map<int, int>;
 
 /**
  * \brief GURPS 3rd edition formula: non-linear lookup table.
@@ -87,5 +84,3 @@ private:
 };
 
 } // namespace gurps_system
-
-Q_DECLARE_METATYPE(gurps_system::CpTable)

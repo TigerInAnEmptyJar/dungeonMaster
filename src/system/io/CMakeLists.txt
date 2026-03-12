@@ -6,6 +6,7 @@ my_add_library(systemIo
   DEPENDS
     PUBLIC Qt6::Core
     PUBLIC DM::Infrastructure
+    PUBLIC DM::System::Datamodel
   HEADER
     include/serializer.hpp
     include/io.hpp

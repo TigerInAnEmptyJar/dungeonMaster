@@ -9,6 +9,7 @@ my_add_library(systemDatamodel
   HEADER
     include/baseObject.hpp
     include/attribute.hpp
+    include/cpTable.hpp
     include/registration.hpp
     src/formula.hpp
     src/linearFormula.hpp
