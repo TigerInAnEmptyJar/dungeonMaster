@@ -1,25 +1,40 @@
 @startuml Context_Diagram
-title "Context diagram: Dungeon Master"
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
 
-:Admin:
-actor "Dungeon-Master" as DM
-:Player:
-agent desktop
-agent mobile
-database Storage
-cloud Webserver
+title Context Diagram: Dungeon Master System
 
-Player --> mobile : "gaming"
-Player --> desktop : "preparation\ngaming"
+Person(admin, "Admin", "System administrator who configures game rules, attributes, and formulas")
+Person(dm, "Dungeon Master", "Game master who runs sessions and manages NPCs (read-only system access)")
+Person(player, "Player", "Game player who manages their character (read-only system access)")
 
-DM --> mobile : "gaming"
-DM --> desktop : "preparation\ngaming"
+System(desktop_admin, "Admin Desktop App", "Full editing interface for system configuration")
+System(desktop_dm, "DM Desktop App", "Session management with read-only system views")
+System(desktop_player, "Player Desktop App", "Character sheet and read-only system views")
+System(mobile_dm, "DM Mobile App", "Quick reference and session tools on mobile")
+System(mobile_player, "Player Mobile App", "Mobile character sheet (read-only)")
 
-Admin --> desktop : "manage system"
+System_Ext(storage, "Data Storage", "Persistent storage for system configs and game data")
+System_Ext(webserver, "Web Server", "Optional networked gameplay server")
 
-desktop <--> Webserver
-mobile <--> Webserver
+Rel(admin, desktop_admin, "Configures system, edits rules", "GUI")
+Rel(dm, desktop_dm, "Runs game sessions, preparation", "GUI")
+Rel(dm, mobile_dm, "Quick reference, gaming sessions", "GUI")
 
-Webserver --> Storage
+Rel(player, desktop_player, "Manages character, preparation", "GUI")
+Rel(player, mobile_player, "Gaming sessions", "GUI")
 
+Rel(desktop_admin, storage, "Saves system configurations", "File/DB")
+Rel(desktop_dm, storage, "Reads system data, saves session data", "File/DB")
+Rel(desktop_player, storage, "Reads system data, saves character data", "File/DB")
+Rel(mobile_dm, storage, "Reads system/session data", "File/DB")
+Rel(mobile_player, storage, "Reads system data, saves character data", "File/DB")
+
+Rel_D(desktop_dm, webserver, "Networked sessions (optional)", "HTTP/WebSocket")
+Rel_D(desktop_player, webserver, "Networked sessions (optional)", "HTTP/WebSocket")
+Rel_D(mobile_dm, webserver, "Networked sessions (optional)", "HTTP/WebSocket")
+Rel_D(mobile_player, webserver, "Networked sessions (optional)", "HTTP/WebSocket")
+
+Rel(webserver, storage, "Persists shared game state", "DB")
+
+SHOW_LEGEND()
 @enduml

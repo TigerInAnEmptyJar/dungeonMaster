@@ -1,38 +1,69 @@
-@startuml Context_Diagram
-title "Container diagram Desktop: Dungeon Master"
+@startuml Container_Diagram_Desktop
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
 
-package Admin{
-  node "Dungeon Master\nAdmin" as dm_admin
-  interface read as admin_read
-  interface write as admin_write
-  dm_admin -- admin_read
-  dm_admin -- admin_write
+title Container Diagram: Desktop Applications
+
+Person(admin, "Admin", "System administrator")
+Person(dm, "Dungeon Master", "Game master")
+Person(player, "Player", "Game player")
+
+System_Boundary(desktop_apps, "Desktop Applications") {
+    Container(admin_app, "Admin Desktop App", "Qt/QML", "Full system editing interface with editable forms")
+    Container(dm_app, "DM Desktop App", "Qt/QML", "Session management with read-only system views")
+    Container(player_app, "Player Desktop App", "Qt/QML", "Character management with read-only system views")
+    
+    Container_Boundary(admin_components, "Admin GUI Components") {
+        Container(admin_gui, "Admin GUI Module", "QML", "Editable forms, formula editor, system switcher")
+    }
+    
+    Container_Boundary(shared_components, "Shared GUI Components") {
+        Container(system_gui, "System GUI Module", "QML", "Read-only attribute/skill views (AttributeListView, AttributeDetailView)")
+        Container(gaming_gui, "Gaming GUI Module", "QML", "Character sheets, dice rolling")
+    }
+    
+    Container_Boundary(datamodel, "Data Layer") {
+        Container(system_datamodel, "System Datamodel", "C++", "Attribute, Skill, AttributeContainer (TreeItem hierarchy)")
+        Container(gaming_datamodel, "Gaming Datamodel", "C++", "Character, Campaign, Session, Location, NPC, Group")
+    }
+    
+    Container_Boundary(models, "Qt Models") {
+        Container(admin_editable_models, "Admin Editable Models", "C++/Qt", "EditableAttributeListModel (system config editing)")
+        Container(dm_editable_models, "DM Editable Models", "C++/Qt", "LocationListModel, NPCListModel, GroupListModel (campaign content)")
+        Container(readonly_models, "Read-Only Models", "C++/Qt", "AttributeListModel (QAbstractListModel)")
+    }
 }
-package "Master"{
-  node "Dungeon Master\nDM" as dm_dm
-  interface read as dm_read
-  interface write as dm_write
-  dm_dm -- dm_read
-  dm_dm -- dm_write
-}
-package Player{
-  node "Dungeon Master\nPlayer" as dm_player
-  interface read as player_read
-  interface write as player_write
-  dm_player -- player_read
-  dm_player -- player_write
-}
-package Webserver {
-  node Webserver as ws
-  interface read as webserverread
-  interface write as webserverwrite
-  webserverread -- ws
-  webserverwrite -- ws
-}
-webserverread .. dm_read
-webserverwrite .. dm_write
-webserverread .. admin_read
-webserverwrite .. admin_write
-webserverread .. player_read
-webserverwrite .. player_write
+
+System_Ext(storage, "File System / Database", "JSON/SQLite", "Persistent storage")
+
+Rel(admin, admin_app, "Configures system", "GUI")
+Rel(dm, dm_app, "Runs sessions", "GUI")
+Rel(player, player_app, "Manages character", "GUI")
+
+Rel(admin_app, admin_gui, "Uses")
+Rel(admin_app, system_gui, "Uses (read-only views)")
+Rel(admin_app, admin_editable_models, "Uses")
+
+Rel(dm_app, system_gui, "Uses")
+Rel(dm_app, gaming_gui, "Uses")
+Rel(dm_app, dm_editable_models, "Uses")
+Rel(dm_app, readonly_models, "Uses")
+
+Rel(player_app, system_gui, "Uses")
+Rel(player_app, gaming_gui, "Uses")
+Rel(player_app, readonly_models, "Uses")
+
+Rel(admin_gui, admin_editable_models, "Binds to")
+Rel(system_gui, readonly_models, "Binds to")
+Rel(gaming_gui, dm_editable_models, "Binds to")
+
+Rel(admin_editable_models, system_datamodel, "Modifies")
+Rel(dm_editable_models, gaming_datamodel, "Modifies")
+Rel(readonly_models, system_datamodel, "Reads")
+Rel(gaming_gui, gaming_datamodel, "Uses")
+
+Rel(admin_app, storage, "Read/Write system configs", "File I/O")
+Rel(dm_app, storage, "Read system, R/W session data", "File I/O")
+Rel(player_app, storage, "Read system, R/W character data", "File I/O")
+
+SHOW_LEGEND()
 @enduml
