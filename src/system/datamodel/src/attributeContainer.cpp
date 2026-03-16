@@ -1,10 +1,12 @@
 #include "attributeContainer.hpp"
 
+#include <boost/uuid/string_generator.hpp>
+
 namespace gurps_system {
 
 AttributeContainer::AttributeContainer() : infrastructure::TreeItem() {}
 
-constexpr boost::uuids::uuid const AttributeContainer::attributeContainerId =
+boost::uuids::uuid const AttributeContainer::attributeContainerId =
     boost::uuids::string_generator{}("c35812f4-ca50-45c2-8e91-d95c95d32b59");
 
 auto AttributeContainer::classId() -> boost::uuids::uuid

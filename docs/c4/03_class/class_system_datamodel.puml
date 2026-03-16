@@ -99,9 +99,14 @@ namespace gurps_system {
   -- Identity --
   + {static} classId(): uuid
   + {abstract} typeId(): uuid
+  -- Properties --
+  + maxDirectBonus(): int
+  + setMaxDirectBonus(value: int): void
   -- Interface --
   + {abstract} levelBonus(investedCp: int): int
   + {abstract} cpCost(levelBonus: int): int
+  -- Signals --
+  + maxDirectBonusChanged(value: int): void
   }
 
   class LinearFormula {
@@ -109,7 +114,11 @@ namespace gurps_system {
   + {static} classId(): uuid
   + typeId(): uuid
   -- Properties --
-  + costPerLevel: int
+  + costPerLevel(): int
+  + setCostPerLevel(value: int): void
+  -- Interface --
+  + levelBonus(investedCp: int): int
+  + cpCost(levelBonus: int): int
   .. note ..
   GURPS 4e: constant cost per level
   }
@@ -119,9 +128,14 @@ namespace gurps_system {
   + {static} classId(): uuid
   + typeId(): uuid
   -- Properties --
-  + table: map<int,int>
+  + table(): CpTable
+  + setTable(table: CpTable): void
+  -- Interface --
+  + levelBonus(investedCp: int): int
+  + cpCost(levelBonus: int): int
   .. note ..
   GURPS 3e: non-linear lookup table
+  CpTable = map<int,int>
   }
 
   gurps_system.Formula <|-- gurps_system.LinearFormula
@@ -131,11 +145,18 @@ namespace gurps_system {
   -- Identity --
   + {static} classId(): uuid
   + typeId(): uuid
-  -- Computed --
-  + level(investedCp: int): int
-  + cpForLevelBonus(levelBonus: int): int
+  -- Direct formula --
+  + insertDirectFormula(formula: shared_ptr<Formula>): void
+  + hasDirectFormula(): bool
+  + directFormula(): Formula
+  -- Derivation --
+  + insertDerivationFormula(formula: shared_ptr<DerivationFormula>): void
+  + derivationFormula(): DerivationFormula*
+  + addParent(ref: shared_ptr<ParentRef>): void
+  + parentCount(): int
+  + parentAt(i: int): ParentRef
   .. note ..
-  handbook definition only\nno per-character state\nformula stored as first tree child\nthrows logic_error if formula child absent\n(see InstanceAttribute for live CP/level)
+  handbook definition only\nno per-character state\nchild layout: DerivationFormula, ParentRef[], Formula
   }
 
   gurps_system.BaseObject <|-- gurps_system.Attribute
@@ -163,10 +184,6 @@ enum Difficulty {
     HARD,
     VERY_HARD,
 }
-
-class SecondaryAttribute {
-}
-gurps_system.Attribute <|-- SecondaryAttribute
 
 class Profession {
 

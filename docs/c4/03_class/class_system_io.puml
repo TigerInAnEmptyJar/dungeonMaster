@@ -5,23 +5,29 @@ hide <<DataModel>> members
 package DataModel {
     class TreeItem <<DataModel>>
     class ObjectFactory <<DataModel>>
+    class ObjectRegistry <<DataModel>>
 }
 
 namespace gurps_system {
 
 class Io {
-+ Io(factory: ObjectFactory&)
++ Io(factory: ObjectFactory&, registry: ObjectRegistry&)
 -- Serializer management --
 + install(serializer: shared_ptr<Serializer>): bool
 + uninstall(id: uuid): bool
 + installedSerializers(): uuid[]
 -- Serializer lookup --
 + serializer(id: uuid): Serializer*
-+ serializer(filter: string): Serializer*
++ serializer(filter: QString): Serializer*
 + allFilters(): QStringList
+-- IO --
++ read(stream: istream): vector<shared_ptr<TreeItem>>
++ write(stream: ostream, objects: vector<shared_ptr<TreeItem>>, filter: QString): void
++ write(stream: ostream, objects: vector<shared_ptr<TreeItem>>, id: uuid): void
 }
 
 gurps_system.Io o-- DataModel.ObjectFactory
+gurps_system.Io o-- DataModel.ObjectRegistry
 
 abstract class Serializer {
 + Serializer()
@@ -30,18 +36,42 @@ abstract class Serializer {
 -- Capabilities --
 + {abstract} filters(): QStringList
 + {abstract} provides(filter: QString): bool
-+ {abstract} canRead(firstLine: QByteArray): bool
+-- Header --
++ {static} kHeaderSize: size_t = 23
++ {static} buildHeader(id: uuid, version: uint16_t): FileHeader
 -- IO --
-+ {abstract} read(stream: QIODevice, factory: ObjectFactory): shared_ptr<TreeItem>
-+ {abstract} write(stream: QIODevice, obj: TreeItem): void
++ {abstract} read(header: FileHeader, version: uint16_t, stream: istream, factory: ObjectFactory, registry: ObjectRegistry): vector<shared_ptr<TreeItem>>
++ {abstract} write(stream: ostream, objects: vector<shared_ptr<TreeItem>>): void
+.. note ..
+FileHeader = array<byte, 23>
 }
 
 gurps_system.Io "1" *-- "*" gurps_system.Serializer
 
-class JsonSerializer
+class JsonSerializer {
+-- Identity --
++ {static} classId(): uuid
++ id(): uuid
+-- Capabilities --
++ filters(): QStringList
++ provides(filter: QString): bool
+-- IO --
++ read(header: FileHeader, version: uint16_t, stream: istream, factory: ObjectFactory, registry: ObjectRegistry): vector<shared_ptr<TreeItem>>
++ write(stream: ostream, objects: vector<shared_ptr<TreeItem>>): void
+}
 gurps_system.Serializer <|-- gurps_system.JsonSerializer
 
-class XmlSerializer
+class XmlSerializer {
+-- Identity --
++ {static} classId(): uuid
++ id(): uuid
+-- Capabilities --
++ filters(): QStringList
++ provides(filter: QString): bool
+-- IO --
++ read(header: FileHeader, version: uint16_t, stream: istream, factory: ObjectFactory, registry: ObjectRegistry): vector<shared_ptr<TreeItem>>
++ write(stream: ostream, objects: vector<shared_ptr<TreeItem>>): void
+}
 gurps_system.Serializer <|-- gurps_system.XmlSerializer
 
 class LatexSerializer

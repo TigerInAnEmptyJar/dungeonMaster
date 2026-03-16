@@ -32,5 +32,6 @@ my_add_library(systemDatamodel
     src/quadraticDerivationFormula.cpp
     src/lookupDerivationFormula.cpp
     src/registration.cpp
+    src/attributeContainer.cpp
   ALIAS DM::System::Datamodel
 )

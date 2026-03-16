@@ -1,6 +1,6 @@
 #pragma once
 
-#include "TreeItem.hpp"
+#include "treeItem.hpp"
 
 namespace gurps_system {
 
@@ -19,7 +19,7 @@ public:
   static auto classId() -> boost::uuids::uuid;
   auto typeId() const -> boost::uuids::uuid override;
 
-  constexpr static boost::uuids::uuid const attributeContainerId;
+  static boost::uuids::uuid const attributeContainerId;
 };
 
 } // namespace gurps_system
