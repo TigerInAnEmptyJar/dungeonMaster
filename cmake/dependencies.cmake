@@ -23,7 +23,7 @@ function(my_find_package _NAME)
   endif()
 endfunction()
 
-my_find_package(Qt6 COMPONENTS Core)
+my_find_package(Qt6 COMPONENTS Core Qml Quick QuickTest Test)
 # QT_CMAKE_EXPORT_NAMESPACE is set inside Qt's cmake scripts, which run inside
 # my_find_package (a function scope). Propagate it so that qt6_wrap_cpp and
 # AUTOMOC can resolve Qt6::moc in subdirectory scopes.

@@ -5,6 +5,7 @@ boost/1.87.0
 
 [options]
 qt/*:qtshadertools=True
+qt/*:qtdeclarative=True
 qt/*:qtsvg=True
 qt/*:qtcharts=True
 qt/*:disabled_features="linguist"

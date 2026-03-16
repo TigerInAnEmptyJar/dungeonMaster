@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/qml/systemGui">
+        <file alias="AttributeDetailView.qml">qml/AttributeDetailView.qml</file>
+        <file alias="AttributeListView.qml">qml/AttributeListView.qml</file>
+        <file alias="AttributesMain.qml">qml/AttributesMain.qml</file>
+    </qresource>
+</RCC>
