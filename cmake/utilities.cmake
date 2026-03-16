@@ -152,14 +152,14 @@ endfunction()
 
 function(my_add_qml_test _NAME)
   set(flags AUTOMOC)
-  set(single SOURCE)
-  set(multi QML_FILES DEPENDS INCLUDES DEFINES)
+  set(single)
+  set(multi SOURCE HEADER QML_FILES DEPENDS INCLUDES DEFINES)
   cmake_parse_arguments(PARSE_ARGV 1 A "${flags}" "${single}" "${multi}")
   
   message(STATUS "Adding QML test ${_NAME}")
   
   # Create the test executable with Qt Quick Test runner
-  add_executable(${_NAME} ${A_SOURCE})
+  add_executable(${_NAME} ${A_SOURCE} ${A_HEADER} ${_moc_sources})
   
   # Copy QML test files to build directory for Qt Quick Test discovery
   foreach(_qml_file ${A_QML_FILES})
@@ -170,6 +170,13 @@ function(my_add_qml_test _NAME)
     )
   endforeach()
   
+  if (A_AUTOMOC)
+    if (A_HEADER)
+      qt6_wrap_cpp(_moc_sources ${A_HEADER} TARGET ${_NAME})
+      target_sources(${_NAME} PRIVATE ${_moc_sources})
+    endif()
+  endif()
+
   # Set up dependencies - Qt Quick Test requires these modules
   set(dependencies Qt6::Core Qt6::Qml Qt6::Quick Qt6::QuickTest)
   if (A_DEPENDS)

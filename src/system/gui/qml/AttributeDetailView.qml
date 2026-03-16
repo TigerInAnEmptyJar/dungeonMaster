@@ -14,6 +14,9 @@ Item {
     /// The Attribute object to display (expected type: gurps_system::Attribute*)
     property var attribute: null
     
+    /// The AttributeListModel for creating formulas
+    property var attributeModel: null
+    
     /// Whether the attribute properties are editable
     property bool editable: false
     
@@ -25,6 +28,21 @@ Item {
 
     implicitWidth: 300
     implicitHeight: contentLayout.implicitHeight + 20
+
+    // Helper function to update all formula editors when attribute changes
+    function updateFormulaEditors() {
+        if (root.attribute && root.attribute.formula) {
+            var formula = root.attribute.formula
+            linearEditor.formula = formula
+            lookupEditor.formula = formula
+            scaledSumEditor.formula = formula
+            quadraticEditor.formula = formula
+            lookupDerivationEditor.formula = formula
+        }
+    }
+
+    // Update editors when attribute changes
+    onAttributeChanged: updateFormulaEditors()
 
     Rectangle {
         anchors.fill: parent
@@ -138,6 +156,119 @@ Item {
                         border.color: "#3498db"
                         border.width: 2
                         radius: 2
+                    }
+                }
+            }
+        }
+        
+        // Formula Editor (only visible in edit mode)
+        GroupBox {
+            visible: root.editable
+            title: "Formula Configuration"
+            Layout.fillWidth: true
+            
+            ColumnLayout {
+                anchors.fill: parent
+                spacing: 10
+                
+                // Formula Type Selector
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 10
+                    
+                    Label {
+                        text: "Formula Type:"
+                        font.bold: true
+                        Layout.preferredWidth: 100
+                    }
+                    
+                    ComboBox {
+                        id: formulaTypeCombo
+                        Layout.fillWidth: true
+                        model: [
+                            "None",
+                            "Linear",
+                            "Lookup Table",
+                            "Scaled Sum Derivation",
+                            "Quadratic Derivation",
+                            "Lookup Derivation"
+                        ]
+                        
+                        // Determine current formula type and set index
+                        Component.onCompleted: updateFormulaType()
+                        
+                        Connections {
+                            target: root
+                            function onAttributeChanged() {
+                                formulaTypeCombo.updateFormulaType()
+                            }
+                        }
+                        
+                        function updateFormulaType() {
+                            if (!root.attributeModel) {
+                                currentIndex = 0
+                                return
+                            }
+                            
+                            var formula = root.attribute ? root.attribute.formula : null
+                            currentIndex = root.attributeModel.getFormulaType(formula)
+                        }
+                        
+                        onCurrentIndexChanged: {
+                            // Skip if we're just updating to match the current formula
+                            if (!root.attribute || !root.attributeModel) {
+                                return
+                            }
+                            
+                            // Check if the index matches the current formula type to avoid unnecessary recreation
+                            var formula = root.attribute.formula
+                            var currentFormulaType = root.attributeModel.getFormulaType(formula)
+                            
+                            // Only create new formula if the type actually changed
+                            if (currentIndex !== currentFormulaType) {
+                                root.attributeModel.setAttributeFormulaType(root.attribute, currentIndex)
+                            }
+                        }
+                    }
+                }
+                
+                // Formula Editor Stack
+                StackLayout {
+                    id: formulaEditorStack
+                    Layout.fillWidth: true
+                    currentIndex: formulaTypeCombo.currentIndex
+                    
+                    // 0: None
+                    Label {
+                        text: "No formula configured. Select a type to create one."
+                        font.italic: true
+                        color: "#666"
+                        Layout.fillWidth: true
+                    }
+                    
+                    // 1: LinearFormula
+                    LinearFormulaEditor {
+                        id: linearEditor
+                    }
+                    
+                    // 2: LookupFormula
+                    LookupFormulaEditor {
+                        id: lookupEditor
+                    }
+                    
+                    // 3: ScaledSumDerivationFormula
+                    ScaledSumDerivationFormulaEditor {
+                        id: scaledSumEditor
+                    }
+                    
+                    // 4: QuadraticDerivationFormula
+                    QuadraticDerivationFormulaEditor {
+                        id: quadraticEditor
+                    }
+                    
+                    // 5: LookupDerivationFormula
+                    LookupDerivationFormulaEditor {
+                        id: lookupDerivationEditor
                     }
                 }
             }

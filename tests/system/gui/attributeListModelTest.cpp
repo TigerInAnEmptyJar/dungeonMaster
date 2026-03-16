@@ -3,6 +3,16 @@
 #include <attribute.hpp>
 #include <attributeContainer.hpp>
 #include <baseObject.hpp>
+#include <objectFactory.hpp>
+#include <registration.hpp>
+
+// Formula classes are in private headers for testing
+#include <formula.hpp>
+#include <linearFormula.hpp>
+#include <lookupDerivationFormula.hpp>
+#include <lookupFormula.hpp>
+#include <quadraticDerivationFormula.hpp>
+#include <scaledSumDerivationFormula.hpp>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -66,6 +76,17 @@ public:
   }
 };
 
+class MockAttributeReceiver
+{
+public:
+  MOCK_METHOD(void, onFormulaChanged, ());
+  MockAttributeReceiver(gurps_system::Attribute& attr)
+  {
+    QObject::connect(&attr, &gurps_system::Attribute::formulaChanged,
+                     [this]() { onFormulaChanged(); });
+  }
+};
+
 // ── Test fixture ──────────────────────────────────────────────────────────────
 
 class AttributeListModelTest : public ::testing::Test
@@ -73,8 +94,10 @@ class AttributeListModelTest : public ::testing::Test
 protected:
   void SetUp() override
   {
+    factory = std::make_unique<infrastructure::ObjectFactory>();
+    gurps_system::registerSystemObjects(*factory);
     container = std::make_shared<gurps_system::AttributeContainer>();
-    model = std::make_unique<gurps_system::gui::AttributeListModel>();
+    model = std::make_unique<gurps_system::gui::AttributeListModel>(factory.get());
     mockReceiver = std::make_unique<StrictMock<MockModelReceiver>>(*model);
   }
 
@@ -83,8 +106,10 @@ protected:
     mockReceiver.reset();
     model.reset();
     container.reset();
+    factory.reset();
   }
 
+  std::unique_ptr<infrastructure::ObjectFactory> factory;
   std::shared_ptr<gurps_system::AttributeContainer> container;
   std::unique_ptr<gurps_system::gui::AttributeListModel> model;
   std::unique_ptr<MockModelReceiver> mockReceiver;
@@ -464,6 +489,286 @@ TEST_F(AttributeListModelTest, AttributeAtWithInvalidIndexReturnsNull)
 TEST_F(AttributeListModelTest, AttributeAtWithoutContainerReturnsNull)
 {
   EXPECT_EQ(model->attributeAt(0), nullptr);
+}
+
+// ── Formula tests ─────────────────────────────────────────────────────────────
+
+TEST_F(AttributeListModelTest, FormulaChangedSignalEmittedOnInsert)
+{
+  auto attr = std::make_shared<gurps_system::Attribute>();
+  MockAttributeReceiver mockAttrReceiver(*attr);
+
+  auto formula = std::make_shared<gurps_system::LinearFormula>(20);
+  EXPECT_CALL(mockAttrReceiver, onFormulaChanged()).Times(1);
+  attr->insertChild(attr->size(), formula);
+}
+
+TEST_F(AttributeListModelTest, FormulaMaxDirectBonusAccessibleViaProperty)
+{
+  model->setContainer(container.get());
+  auto attr = std::make_shared<gurps_system::Attribute>();
+  auto formula = std::make_shared<gurps_system::LinearFormula>(10);
+  formula->setMaxDirectBonus(5);
+  attr->insertChild(attr->size(), formula);
+
+  EXPECT_CALL(*mockReceiver, onRowsInserted(_, 0, 0)).Times(1);
+  container->insertChild(0, attr);
+
+  auto* attrPtr = model->attributeAt(0);
+  ASSERT_NE(attrPtr, nullptr);
+
+  QObject* formulaObj = attrPtr->formula();
+  ASSERT_NE(formulaObj, nullptr);
+
+  int maxBonus = formulaObj->property("maxDirectBonus").toInt();
+  EXPECT_EQ(maxBonus, 5);
+}
+
+TEST_F(AttributeListModelTest, FormulaCostPerLevelAccessibleViaProperty)
+{
+  model->setContainer(container.get());
+  auto attr = std::make_shared<gurps_system::Attribute>();
+  auto formula = std::make_shared<gurps_system::LinearFormula>(15);
+
+  EXPECT_CALL(*mockReceiver, onRowsInserted(_, 0, 0)).Times(1);
+  attr->insertChild(attr->size(), formula);
+  container->insertChild(0, attr);
+
+  auto* attrPtr = model->attributeAt(0);
+  ASSERT_NE(attrPtr, nullptr);
+
+  QObject* formulaObj = attrPtr->formula();
+  ASSERT_NE(formulaObj, nullptr);
+
+  int costPerLevel = formulaObj->property("costPerLevel").toInt();
+  EXPECT_EQ(costPerLevel, 15);
+}
+
+// ── Unified formula handling tests ────────────────────────────────────────────
+
+TEST_F(AttributeListModelTest, FormulaObjectReturnsDerivationFormula)
+{
+  model->setContainer(container.get());
+  auto attr = std::make_shared<gurps_system::Attribute>();
+  auto derivFormula = std::make_shared<gurps_system::QuadraticDerivationFormula>(5);
+  attr->insertChild(0, derivFormula);
+
+  EXPECT_CALL(*mockReceiver, onRowsInserted(_, 0, 0)).Times(1);
+  container->insertChild(0, attr);
+
+  auto* attrPtr = model->attributeAt(0);
+  ASSERT_NE(attrPtr, nullptr);
+
+  QObject* formulaObj = attrPtr->formula();
+  ASSERT_NE(formulaObj, nullptr);
+  EXPECT_EQ(formulaObj, derivFormula.get());
+}
+
+TEST_F(AttributeListModelTest, DerivationFormulaChangedSignalEmitted)
+{
+  auto attr = std::make_shared<gurps_system::Attribute>();
+  MockAttributeReceiver mockAttrReceiver(*attr);
+
+  auto derivFormula =
+      std::make_shared<gurps_system::ScaledSumDerivationFormula>(QList<int>{1, 1}, 4);
+  EXPECT_CALL(mockAttrReceiver, onFormulaChanged()).Times(1);
+  attr->insertChild(0, derivFormula);
+}
+
+TEST_F(AttributeListModelTest, DerivationFormulaDivisorAccessibleViaProperty)
+{
+  model->setContainer(container.get());
+  auto attr = std::make_shared<gurps_system::Attribute>();
+  auto derivFormula = std::make_shared<gurps_system::QuadraticDerivationFormula>(10);
+  attr->insertChild(0, derivFormula);
+
+  EXPECT_CALL(*mockReceiver, onRowsInserted(_, 0, 0)).Times(1);
+  container->insertChild(0, attr);
+
+  auto* attrPtr = model->attributeAt(0);
+  ASSERT_NE(attrPtr, nullptr);
+
+  QObject* formulaObj = attrPtr->formula();
+  ASSERT_NE(formulaObj, nullptr);
+
+  int divisor = formulaObj->property("divisor").toInt();
+  EXPECT_EQ(divisor, 10);
+}
+
+// ── getFormulaType tests ──────────────────────────────────────────────────────
+
+TEST_F(AttributeListModelTest, GetFormulaTypeReturnsZeroForNull)
+{
+  int formulaType = model->getFormulaType(nullptr);
+  EXPECT_EQ(formulaType, 0);
+}
+
+TEST_F(AttributeListModelTest, GetFormulaTypeReturnsOneForLinearFormula)
+{
+  auto linearFormula = std::make_shared<gurps_system::LinearFormula>(10);
+  int formulaType = model->getFormulaType(linearFormula.get());
+  EXPECT_EQ(formulaType, 1);
+}
+
+TEST_F(AttributeListModelTest, GetFormulaTypeReturnsTwoForLookupFormula)
+{
+  auto lookupFormula =
+      std::make_shared<gurps_system::LookupFormula>(std::map<int, int>{{0, 0}, {1, 10}});
+  int formulaType = model->getFormulaType(lookupFormula.get());
+  EXPECT_EQ(formulaType, 2);
+}
+
+TEST_F(AttributeListModelTest, GetFormulaTypeReturnsThreeForScaledSumDerivation)
+{
+  auto scaledSumFormula =
+      std::make_shared<gurps_system::ScaledSumDerivationFormula>(QList<int>{1, 1}, 4);
+  int formulaType = model->getFormulaType(scaledSumFormula.get());
+  EXPECT_EQ(formulaType, 3);
+}
+
+TEST_F(AttributeListModelTest, GetFormulaTypeReturnsFourForQuadraticDerivation)
+{
+  auto quadraticFormula = std::make_shared<gurps_system::QuadraticDerivationFormula>(5);
+  int formulaType = model->getFormulaType(quadraticFormula.get());
+  EXPECT_EQ(formulaType, 4);
+}
+
+TEST_F(AttributeListModelTest, GetFormulaTypeReturnsFiveForLookupDerivation)
+{
+  auto lookupDerivFormula = std::make_shared<gurps_system::LookupDerivationFormula>(
+      std::map<int, int>{{10, 10}, {12, 11}});
+  int formulaType = model->getFormulaType(lookupDerivFormula.get());
+  EXPECT_EQ(formulaType, 5);
+}
+
+TEST_F(AttributeListModelTest, GetFormulaTypeWorksWithAttributeFormula)
+{
+  auto attr = std::make_shared<gurps_system::Attribute>();
+  auto linearFormula = std::make_shared<gurps_system::LinearFormula>(20);
+  attr->insertChild(0, linearFormula);
+
+  int formulaType = model->getFormulaType(attr->formula());
+  EXPECT_EQ(formulaType, 1);
+}
+
+// ── setAttributeFormulaType tests ─────────────────────────────────────────────
+
+TEST_F(AttributeListModelTest, SetAttributeFormulaTypeWithNullAttributeFails)
+{
+  bool result = model->setAttributeFormulaType(nullptr, 1);
+  EXPECT_FALSE(result);
+}
+
+TEST_F(AttributeListModelTest, SetAttributeFormulaTypeToNoneRemovesFormula)
+{
+  auto attr = std::make_shared<gurps_system::Attribute>();
+  auto linearFormula = std::make_shared<gurps_system::LinearFormula>(10);
+  attr->insertChild(0, linearFormula);
+
+  ASSERT_NE(attr->formula(), nullptr);
+
+  bool result = model->setAttributeFormulaType(attr.get(), 0); // None
+  EXPECT_TRUE(result);
+  EXPECT_EQ(attr->formula(), nullptr);
+}
+
+TEST_F(AttributeListModelTest, SetAttributeFormulaTypeCreatesLinearFormula)
+{
+  auto attr = std::make_shared<gurps_system::Attribute>();
+
+  bool result = model->setAttributeFormulaType(attr.get(), 1); // LinearFormula
+  EXPECT_TRUE(result);
+
+  ASSERT_NE(attr->formula(), nullptr);
+  EXPECT_EQ(model->getFormulaType(attr->formula()), 1);
+
+  // Verify default property value
+  auto* formulaObj = dynamic_cast<QObject*>(attr->formula());
+  ASSERT_NE(formulaObj, nullptr);
+  EXPECT_EQ(formulaObj->property("costPerLevel").toInt(), 10);
+}
+
+TEST_F(AttributeListModelTest, SetAttributeFormulaTypeCreatesLookupFormula)
+{
+  auto attr = std::make_shared<gurps_system::Attribute>();
+
+  bool result = model->setAttributeFormulaType(attr.get(), 2); // LookupFormula
+  EXPECT_TRUE(result);
+
+  ASSERT_NE(attr->formula(), nullptr);
+  EXPECT_EQ(model->getFormulaType(attr->formula()), 2);
+}
+
+TEST_F(AttributeListModelTest, SetAttributeFormulaTypeCreatesScaledSumFormula)
+{
+  auto attr = std::make_shared<gurps_system::Attribute>();
+
+  bool result = model->setAttributeFormulaType(attr.get(), 3); // ScaledSumDerivationFormula
+  EXPECT_TRUE(result);
+
+  ASSERT_NE(attr->formula(), nullptr);
+  EXPECT_EQ(model->getFormulaType(attr->formula()), 3);
+}
+
+TEST_F(AttributeListModelTest, SetAttributeFormulaTypeCreatesQuadraticFormula)
+{
+  auto attr = std::make_shared<gurps_system::Attribute>();
+
+  bool result = model->setAttributeFormulaType(attr.get(), 4); // QuadraticDerivationFormula
+  EXPECT_TRUE(result);
+
+  ASSERT_NE(attr->formula(), nullptr);
+  EXPECT_EQ(model->getFormulaType(attr->formula()), 4);
+
+  // Verify default property value
+  auto* formulaObj = dynamic_cast<QObject*>(attr->formula());
+  ASSERT_NE(formulaObj, nullptr);
+  EXPECT_EQ(formulaObj->property("divisor").toInt(), 5);
+}
+
+TEST_F(AttributeListModelTest, SetAttributeFormulaTypeCreatesLookupDerivationFormula)
+{
+  auto attr = std::make_shared<gurps_system::Attribute>();
+
+  bool result = model->setAttributeFormulaType(attr.get(), 5); // LookupDerivationFormula
+  EXPECT_TRUE(result);
+
+  ASSERT_NE(attr->formula(), nullptr);
+  EXPECT_EQ(model->getFormulaType(attr->formula()), 5);
+}
+
+TEST_F(AttributeListModelTest, SetAttributeFormulaTypeReplacesExistingFormula)
+{
+  auto attr = std::make_shared<gurps_system::Attribute>();
+  auto linearFormula = std::make_shared<gurps_system::LinearFormula>(10);
+  attr->setFormula(linearFormula.get());
+
+  ASSERT_EQ(model->getFormulaType(attr->formula()), 1);
+
+  // Replace with QuadraticDerivationFormula
+  bool result = model->setAttributeFormulaType(attr.get(), 4);
+  EXPECT_TRUE(result);
+
+  ASSERT_NE(attr->formula(), nullptr);
+  EXPECT_EQ(model->getFormulaType(attr->formula()), 4);
+}
+
+TEST_F(AttributeListModelTest, SetAttributeFormulaTypeWithInvalidIndexFails)
+{
+  auto attr = std::make_shared<gurps_system::Attribute>();
+
+  bool result = model->setAttributeFormulaType(attr.get(), 99);
+  EXPECT_FALSE(result);
+  EXPECT_EQ(attr->formula(), nullptr); // Should not have created anything
+}
+
+TEST_F(AttributeListModelTest, SetAttributeFormulaTypeWithNegativeIndexFails)
+{
+  auto attr = std::make_shared<gurps_system::Attribute>();
+
+  bool result = model->setAttributeFormulaType(attr.get(), -1);
+  EXPECT_FALSE(result);
+  EXPECT_EQ(attr->formula(), nullptr);
 }
 
 } // namespace

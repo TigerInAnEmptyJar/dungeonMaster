@@ -120,6 +120,7 @@ Item {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     attribute: root.selectedAttribute
+                    attributeModel: root.attributeModel
                     editable: root.editMode
                     
                     onSaveRequested: {

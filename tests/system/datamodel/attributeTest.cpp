@@ -1,6 +1,5 @@
 #include <attribute.hpp>
 #include <baseObject.hpp>
-#include <derivationFormula.hpp>
 #include <formula.hpp>
 #include <linearFormula.hpp>
 #include <parentRef.hpp>
@@ -21,7 +20,7 @@ using namespace gurps_system;
 static auto makeAttrWithFormula() -> std::shared_ptr<Attribute>
 {
   auto attr = std::make_shared<Attribute>();
-  attr->insertDirectFormula(std::make_shared<LinearFormula>(10));
+  attr->insertChild(attr->size(), std::make_shared<LinearFormula>(10));
   return attr;
 }
 
@@ -57,35 +56,33 @@ TEST_F(AttributeTest, CreateWithoutFormulaSucceeds)
 
 // ── Direct formula ────────────────────────────────────────────────────────────
 
-TEST_F(AttributeTest, HasDirectFormulaFalseOnFreshAttribute)
+TEST_F(AttributeTest, FormulaObjectIsNullOnFreshAttribute)
 {
   auto a = std::make_shared<Attribute>();
-  EXPECT_FALSE(a->hasDirectFormula());
+  EXPECT_EQ(a->formula(), nullptr);
 }
 
-TEST_F(AttributeTest, HasDirectFormulaTrueAfterInsert) { EXPECT_TRUE(attr->hasDirectFormula()); }
+TEST_F(AttributeTest, FormulaObjectReturnsFormulaAfterInsert)
+{
+  EXPECT_NE(attr->formula(), nullptr);
+}
 
 TEST_F(AttributeTest, InsertDirectFormulaAddsOneChild)
 {
   auto a = std::make_shared<Attribute>();
-  a->insertDirectFormula(std::make_shared<LinearFormula>(10));
+  a->insertChild(a->size(), std::make_shared<LinearFormula>(10));
   EXPECT_EQ(a->size(), 1);
 }
 
-TEST_F(AttributeTest, InsertDirectFormulaTwiceThrows)
+TEST_F(AttributeTest, InsertDirectFormulaTwiceDoesNotThrow)
 {
-  EXPECT_THROW(attr->insertDirectFormula(std::make_shared<LinearFormula>(5)), std::logic_error);
+  // With direct TreeItem API, duplicate checks are responsibility of caller
+  EXPECT_NO_THROW(attr->insertChild(attr->size(), std::make_shared<LinearFormula>(5)));
 }
 
-TEST_F(AttributeTest, DirectFormulaThrowsWhenAbsent)
+TEST_F(AttributeTest, FormulaObjectReturnsInsertedFormula)
 {
-  auto a = std::make_shared<Attribute>();
-  EXPECT_THROW(std::ignore = a->directFormula(), std::logic_error);
-}
-
-TEST_F(AttributeTest, DirectFormulaReturnsInsertedFormula)
-{
-  EXPECT_NE(dynamic_cast<LinearFormula const*>(&attr->directFormula()), nullptr);
+  EXPECT_NE(dynamic_cast<LinearFormula*>(attr->formula()), nullptr);
 }
 
 TEST_F(AttributeTest, FormulaIsFirstChild) { EXPECT_NE(attr->childAt(0), nullptr); }
@@ -97,96 +94,122 @@ TEST_F(AttributeTest, FirstChildIsAFormula)
 
 // ── Derivation formula ────────────────────────────────────────────────────────
 
-TEST_F(AttributeTest, DerivationFormulaIsNullptrOnFreshAttribute)
+TEST_F(AttributeTest, FormulaObjectIsNullptrOnFreshAttribute)
 {
   auto a = std::make_shared<Attribute>();
-  EXPECT_EQ(a->derivationFormula(), nullptr);
+  EXPECT_EQ(a->formula(), nullptr);
 }
 
 TEST_F(AttributeTest, InsertDerivationFormulaSucceeds)
 {
   auto a = std::make_shared<Attribute>();
   EXPECT_NO_THROW(
-      a->insertDerivationFormula(std::make_shared<ScaledSumDerivationFormula>(QList<int>{1}, 1)));
+      a->insertChild(0, std::make_shared<ScaledSumDerivationFormula>(QList<int>{1}, 1)));
 }
 
 TEST_F(AttributeTest, InsertDerivationFormulaPlacesItAtIndexZero)
 {
   auto a = std::make_shared<Attribute>();
-  a->insertDerivationFormula(std::make_shared<ScaledSumDerivationFormula>(QList<int>{1}, 1));
-  EXPECT_NE(dynamic_cast<DerivationFormula*>(a->childAt(0).get()), nullptr);
+  a->insertChild(0, std::make_shared<ScaledSumDerivationFormula>(QList<int>{1}, 1));
+  EXPECT_NE(dynamic_cast<Formula*>(a->childAt(0).get()), nullptr);
 }
 
-TEST_F(AttributeTest, InsertDerivationFormulaTwiceThrows)
+TEST_F(AttributeTest, InsertDerivationFormulaTwiceDoesNotThrow)
 {
+  // With direct TreeItem API, duplicate checks are responsibility of caller
   auto a = std::make_shared<Attribute>();
-  a->insertDerivationFormula(std::make_shared<ScaledSumDerivationFormula>(QList<int>{1}, 1));
-  EXPECT_THROW(
-      a->insertDerivationFormula(std::make_shared<ScaledSumDerivationFormula>(QList<int>{1}, 1)),
-      std::logic_error);
+  a->insertChild(0, std::make_shared<ScaledSumDerivationFormula>(QList<int>{1}, 1));
+  EXPECT_NO_THROW(
+      a->insertChild(0, std::make_shared<ScaledSumDerivationFormula>(QList<int>{1}, 1)));
 }
 
-TEST_F(AttributeTest, DerivationFormulaReturnsInsertedFormula)
+TEST_F(AttributeTest, FormulaObjectReturnsDerivationFormula)
 {
   auto a = std::make_shared<Attribute>();
-  a->insertDerivationFormula(std::make_shared<ScaledSumDerivationFormula>(QList<int>{1}, 1));
-  EXPECT_NE(dynamic_cast<ScaledSumDerivationFormula*>(a->derivationFormula()), nullptr);
+  a->insertChild(0, std::make_shared<ScaledSumDerivationFormula>(QList<int>{1}, 1));
+  EXPECT_NE(dynamic_cast<ScaledSumDerivationFormula*>(a->formula()), nullptr);
 }
 
 TEST_F(AttributeTest, DerivationFormulaRemainsAtIndexZeroAfterDirectFormulaInserted)
 {
   auto a = std::make_shared<Attribute>();
-  a->insertDerivationFormula(std::make_shared<ScaledSumDerivationFormula>(QList<int>{1}, 1));
-  a->insertDirectFormula(std::make_shared<LinearFormula>(5));
-  EXPECT_NE(dynamic_cast<DerivationFormula*>(a->childAt(0).get()), nullptr);
+  a->insertChild(0, std::make_shared<ScaledSumDerivationFormula>(QList<int>{1}, 1));
+  a->insertChild(a->size(), std::make_shared<LinearFormula>(5));
+  EXPECT_NE(dynamic_cast<Formula*>(a->childAt(0).get()), nullptr);
 }
 
 // ── Parent references ─────────────────────────────────────────────────────────
 
 TEST_F(AttributeTest, ParentCountIsZeroOnFreshAttribute)
 {
-  EXPECT_EQ(std::make_shared<Attribute>()->parentCount(), 0);
+  // Count ParentRef children via TreeItem interface
+  auto a = std::make_shared<Attribute>();
+  int count = 0;
+  for (int i = 0; i < a->size(); ++i) {
+    if (dynamic_cast<ParentRef*>(a->childAt(i).get())) {
+      ++count;
+    }
+  }
+  EXPECT_EQ(count, 0);
 }
 
-TEST_F(AttributeTest, AddParentIncreasesParentCount)
+TEST_F(AttributeTest, InsertParentIncreasesParentCount)
 {
   auto a = std::make_shared<Attribute>();
-  a->addParent(std::make_shared<ParentRef>());
-  EXPECT_EQ(a->parentCount(), 1);
+  // Insert ParentRef after derivation formula (if present), before direct formula (if present)
+  a->insertChild(a->size(), std::make_shared<ParentRef>());
+  int count = 0;
+  for (int i = 0; i < a->size(); ++i) {
+    if (dynamic_cast<ParentRef*>(a->childAt(i).get())) {
+      ++count;
+    }
+  }
+  EXPECT_EQ(count, 1);
 }
 
-TEST_F(AttributeTest, AddTwoParentsGivesParentCountTwo)
+TEST_F(AttributeTest, InsertTwoParentsGivesParentCountTwo)
 {
   auto a = std::make_shared<Attribute>();
-  a->addParent(std::make_shared<ParentRef>());
-  a->addParent(std::make_shared<ParentRef>());
-  EXPECT_EQ(a->parentCount(), 2);
+  a->insertChild(a->size(), std::make_shared<ParentRef>());
+  a->insertChild(a->size(), std::make_shared<ParentRef>());
+  int count = 0;
+  for (int i = 0; i < a->size(); ++i) {
+    if (dynamic_cast<ParentRef*>(a->childAt(i).get())) {
+      ++count;
+    }
+  }
+  EXPECT_EQ(count, 2);
 }
 
-TEST_F(AttributeTest, ParentAtZeroReturnsInsertedParent)
+TEST_F(AttributeTest, ParentRefAccessibleViaTreeItemInterface)
 {
   auto a = std::make_shared<Attribute>();
   auto ref = std::make_shared<ParentRef>();
   ref->setTargetIdString("aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee");
-  a->addParent(ref);
-  EXPECT_EQ(a->parentAt(0).targetIdString(), "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee");
-}
+  a->insertChild(a->size(), ref);
 
-TEST_F(AttributeTest, ParentAtOutOfRangeThrows)
-{
-  auto a = std::make_shared<Attribute>();
-  EXPECT_THROW(std::ignore = a->parentAt(0), std::out_of_range);
+  // Find the ParentRef child
+  ParentRef* foundRef = nullptr;
+  for (int i = 0; i < a->size(); ++i) {
+    if (auto* pr = dynamic_cast<ParentRef*>(a->childAt(i).get())) {
+      foundRef = pr;
+      break;
+    }
+  }
+  ASSERT_NE(foundRef, nullptr);
+  EXPECT_EQ(foundRef->targetIdString(), "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee");
 }
 
 TEST_F(AttributeTest, ParentInsertedBeforeDirectFormula)
 {
   // Layout: [DerivationFormula, ParentRef, DirectFormula]
   auto a = std::make_shared<Attribute>();
-  a->insertDerivationFormula(std::make_shared<ScaledSumDerivationFormula>(QList<int>{1}, 1));
-  a->insertDirectFormula(std::make_shared<LinearFormula>(5));
-  a->addParent(std::make_shared<ParentRef>());
+  a->insertChild(0, std::make_shared<ScaledSumDerivationFormula>(QList<int>{1}, 1));
+  a->insertChild(a->size(), std::make_shared<LinearFormula>(5));
+  // Insert ParentRef between derivation and direct formula
+  a->insertChild(1, std::make_shared<ParentRef>());
   ASSERT_EQ(a->size(), 3);
-  EXPECT_NE(dynamic_cast<DerivationFormula*>(a->childAt(0).get()), nullptr);
+  EXPECT_NE(dynamic_cast<Formula*>(a->childAt(0).get()), nullptr);
   EXPECT_NE(dynamic_cast<ParentRef*>(a->childAt(1).get()), nullptr);
   EXPECT_NE(dynamic_cast<Formula*>(a->childAt(2).get()), nullptr);
 }

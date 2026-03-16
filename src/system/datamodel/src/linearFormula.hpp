@@ -39,16 +39,6 @@ public:
 
   // ── Formula ───────────────────────────────────────────────────────────────
 
-  /**
-   * \brief Returns \c investedCp / costPerLevel (truncated toward zero).
-   */
-  auto levelBonus(int investedCp) const -> int override;
-
-  /**
-   * \brief Returns \c levelBonus * costPerLevel.
-   */
-  auto cpCost(int levelBonus) const -> int override;
-
   auto costPerLevel() const -> int;
 
   /**
@@ -60,7 +50,7 @@ public:
   auto setCostPerLevel(int value) -> void;
 
 private:
-  int _costPerLevel;
+  int _costPerLevel = 10;
 };
 
 } // namespace gurps_system

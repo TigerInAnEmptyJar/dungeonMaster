@@ -56,18 +56,6 @@ public:
    */
   auto setMaxDirectBonus(int value) -> void;
 
-  // ── Interface ───────────────────────────────────────────────────────────
-
-  /**
-   * \brief Returns the level bonus achieved by investing \p investedCp character points.
-   */
-  virtual auto levelBonus(int investedCp) const -> int = 0;
-
-  /**
-   * \brief Returns the character point cost to achieve the given \p levelBonus.
-   */
-  virtual auto cpCost(int levelBonus) const -> int = 0;
-
 Q_SIGNALS:
   void maxDirectBonusChanged(int value);
 

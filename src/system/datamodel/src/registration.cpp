@@ -1,13 +1,13 @@
 #include <registration.hpp>
 
 #include <attribute.hpp>
-#include <derivationFormula.hpp>
-#include <linearFormula.hpp>
-#include <lookupDerivationFormula.hpp>
-#include <lookupFormula.hpp>
 #include <parentRef.hpp>
-#include <quadraticDerivationFormula.hpp>
-#include <scaledSumDerivationFormula.hpp>
+
+#include "linearFormula.hpp"
+#include "lookupDerivationFormula.hpp"
+#include "lookupFormula.hpp"
+#include "quadraticDerivationFormula.hpp"
+#include "scaledSumDerivationFormula.hpp"
 
 namespace gurps_system {
 
@@ -18,7 +18,7 @@ void registerSystemObjects(infrastructure::ObjectFactory& factory)
 
   // costPerLevel=1 is the minimal valid value; overwritten by the serializer.
   factory.install(LinearFormula::classId(),
-                  [](boost::uuids::uuid id) { return std::make_shared<LinearFormula>(1, id); });
+                  [](boost::uuids::uuid id) { return std::make_shared<LinearFormula>(10, id); });
 
   // {0,0} is the required sentinel entry; overwritten by the serializer.
   factory.install(LookupFormula::classId(), [](boost::uuids::uuid id) {
@@ -35,13 +35,32 @@ void registerSystemObjects(infrastructure::ObjectFactory& factory)
 
   // divisor=1 is the minimal valid value; overwritten by the serializer.
   factory.install(QuadraticDerivationFormula::classId(), [](boost::uuids::uuid id) {
-    return std::make_shared<QuadraticDerivationFormula>(1, id);
+    return std::make_shared<QuadraticDerivationFormula>(5, id);
   });
 
   // {0,0} is the minimal valid entry; overwritten by the serializer.
   factory.install(LookupDerivationFormula::classId(), [](boost::uuids::uuid id) {
     return std::make_shared<LookupDerivationFormula>(std::map<int, int>{{0, 0}}, id);
   });
+}
+
+auto formulaTypeToClassId(FormulaType type) -> boost::uuids::uuid
+{
+  switch (type) {
+  case FormulaType::Linear:
+    return LinearFormula::classId();
+  case FormulaType::Lookup:
+    return LookupFormula::classId();
+  case FormulaType::ScaledSumDerivation:
+    return ScaledSumDerivationFormula::classId();
+  case FormulaType::QuadraticDerivation:
+    return QuadraticDerivationFormula::classId();
+  case FormulaType::LookupDerivation:
+    return LookupDerivationFormula::classId();
+  case FormulaType::None:
+  default:
+    return boost::uuids::uuid{}; // nil UUID
+  }
 }
 
 } // namespace gurps_system

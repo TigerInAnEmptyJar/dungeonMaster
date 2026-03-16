@@ -57,19 +57,6 @@ public:
 
   // ── Formula ───────────────────────────────────────────────────────────────
 
-  /**
-   * \brief Returns the highest level bonus whose cumulative CP cost ≤ \p investedCp.
-   *        Falls back to 0 if below the first positive entry.
-   */
-  auto levelBonus(int investedCp) const -> int override;
-
-  /**
-   * \brief Returns the cumulative CP cost for the given \p levelBonus.
-   *
-   * \throws std::out_of_range if \p levelBonus is not present in the table.
-   */
-  auto cpCost(int levelBonus) const -> int override;
-
   auto table() const -> CpTable const&;
 
   /**

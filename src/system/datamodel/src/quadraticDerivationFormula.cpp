@@ -7,7 +7,7 @@
 namespace gurps_system {
 
 QuadraticDerivationFormula::QuadraticDerivationFormula(int divisor, boost::uuids::uuid objectId)
-    : DerivationFormula{objectId}, _divisor{divisor}
+    : Formula{objectId}, _divisor{divisor}
 {
   if (divisor <= 0) {
     throw std::invalid_argument{"QuadraticDerivationFormula: divisor must be > 0"};

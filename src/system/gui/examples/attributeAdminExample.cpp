@@ -1,6 +1,8 @@
 #include <attribute.hpp>
 #include <attributeContainer.hpp>
 #include <attributeListModel.hpp>
+#include <objectFactory.hpp>
+#include <registration.hpp>
 
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
@@ -24,6 +26,10 @@ int main(int argc, char* argv[])
 {
   QGuiApplication app(argc, argv);
 
+  // Create and register object factory
+  auto factory = std::make_unique<infrastructure::ObjectFactory>();
+  gurps_system::registerSystemObjects(*factory);
+
   // Create a container for attributes
   auto container = std::make_shared<gurps_system::AttributeContainer>();
 
@@ -31,25 +37,54 @@ int main(int argc, char* argv[])
   auto strength = std::make_shared<gurps_system::Attribute>();
   strength->setName("Strength (ST)");
   strength->setDescription("Physical power and ability to lift, carry, and damage.");
+  // GURPS 4e: ST costs 10 CP per level - create via factory
+  auto stFormulaClassId = gurps_system::formulaTypeToClassId(gurps_system::FormulaType::Linear);
+  auto stFormula = factory->create(stFormulaClassId);
+  if (stFormula) {
+    stFormula->setProperty("costPerLevel", 10);
+    stFormula->setProperty("maxDirectBonus", -1); // Unlimited
+    strength->insertChild(strength->size(), stFormula);
+  }
   container->insertChild(0, strength);
 
   auto dexterity = std::make_shared<gurps_system::Attribute>();
   dexterity->setName("Dexterity (DX)");
   dexterity->setDescription("Agility, coordination, and fine motor control.");
+  // GURPS 4e: DX costs 20 CP per level
+  auto dxFormula = factory->create(stFormulaClassId);
+  if (dxFormula) {
+    dxFormula->setProperty("costPerLevel", 20);
+    dxFormula->setProperty("maxDirectBonus", -1); // Unlimited
+    dexterity->insertChild(dexterity->size(), dxFormula);
+  }
   container->insertChild(1, dexterity);
 
   auto intelligence = std::make_shared<gurps_system::Attribute>();
   intelligence->setName("Intelligence (IQ)");
   intelligence->setDescription("Mental ability, creativity, and reasoning power.");
+  // GURPS 4e: IQ costs 20 CP per level
+  auto iqFormula = factory->create(stFormulaClassId);
+  if (iqFormula) {
+    iqFormula->setProperty("costPerLevel", 20);
+    iqFormula->setProperty("maxDirectBonus", -1); // Unlimited
+    intelligence->insertChild(intelligence->size(), iqFormula);
+  }
   container->insertChild(2, intelligence);
 
   auto health = std::make_shared<gurps_system::Attribute>();
   health->setName("Health (HT)");
   health->setDescription("Physical fitness, disease resistance, and endurance.");
+  // GURPS 4e: HT costs 10 CP per level
+  auto htFormula = factory->create(stFormulaClassId);
+  if (htFormula) {
+    htFormula->setProperty("costPerLevel", 10);
+    htFormula->setProperty("maxDirectBonus", -1); // Unlimited
+    health->insertChild(health->size(), htFormula);
+  }
   container->insertChild(3, health);
 
   // Create the list model
-  auto* listModel = new gurps_system::gui::AttributeListModel(&app);
+  auto* listModel = new gurps_system::gui::AttributeListModel(factory.get(), &app);
   listModel->setContainer(container.get());
 
   // Set up QML engine

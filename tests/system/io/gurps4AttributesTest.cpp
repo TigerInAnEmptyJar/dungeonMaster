@@ -150,7 +150,7 @@ static auto makeBasicAttr(std::string const& name, int cpPerLevel, boost::uuids:
 {
   auto attr = std::make_shared<Attribute>(id);
   attr->setName(QString::fromStdString(name));
-  attr->insertDirectFormula(std::make_shared<LinearFormula>(cpPerLevel));
+  attr->insertChild(attr->size(), std::make_shared<LinearFormula>(cpPerLevel));
   return attr;
 }
 
@@ -162,11 +162,19 @@ static auto makeScaledSecondary(std::string const& name, QList<int> const& coeff
 {
   auto sa = std::make_shared<Attribute>(id);
   sa->setName(QString::fromStdString(name));
-  sa->insertDerivationFormula(std::make_shared<ScaledSumDerivationFormula>(coefficients, divisor));
+  auto formula = std::make_shared<ScaledSumDerivationFormula>(coefficients, divisor);
+  sa->setFormula(formula.get());
   for (auto const& pid : parentIds) {
     auto ref = std::make_shared<ParentRef>();
     ref->setTargetIdString(QString::fromStdString(boost::uuids::to_string(pid)));
-    sa->addParent(ref);
+    // Insert ParentRef after derivation formula (position 0), before any direct formula
+    int parentPos = 1; // Count existing ParentRefs
+    for (int i = 1; i < sa->size(); ++i) {
+      if (dynamic_cast<ParentRef*>(sa->childAt(i).get()) != nullptr) {
+        parentPos = i + 1;
+      }
+    }
+    sa->insertChild(parentPos, ref);
   }
   return sa;
 }
@@ -198,10 +206,11 @@ static auto makeGurps4Setup() -> Gurps4Setup
   {
     auto sa = std::make_shared<Attribute>(ids::basicLift());
     sa->setName("Basic Lift");
-    sa->insertDerivationFormula(std::make_shared<QuadraticDerivationFormula>(5));
+    auto formula = std::make_shared<QuadraticDerivationFormula>(5);
+    sa->setFormula(formula.get());
     auto ref = std::make_shared<ParentRef>();
     ref->setTargetIdString(QString::fromStdString(boost::uuids::to_string(ids::st())));
-    sa->addParent(ref);
+    sa->insertChild(1, ref); // Insert ParentRef after derivation formula
     s.basicLift = sa;
   }
 
@@ -209,10 +218,11 @@ static auto makeGurps4Setup() -> Gurps4Setup
   {
     auto sa = std::make_shared<Attribute>(ids::thrustDmg());
     sa->setName("Thrust Damage");
-    sa->insertDerivationFormula(std::make_shared<LookupDerivationFormula>(k_thrustTable));
+    auto formula = std::make_shared<LookupDerivationFormula>(k_thrustTable);
+    sa->setFormula(formula.get());
     auto ref = std::make_shared<ParentRef>();
     ref->setTargetIdString(QString::fromStdString(boost::uuids::to_string(ids::st())));
-    sa->addParent(ref);
+    sa->insertChild(1, ref); // Insert ParentRef after derivation formula
     s.thrustDmg = sa;
   }
 
@@ -220,10 +230,11 @@ static auto makeGurps4Setup() -> Gurps4Setup
   {
     auto sa = std::make_shared<Attribute>(ids::swingDmg());
     sa->setName("Swing Damage");
-    sa->insertDerivationFormula(std::make_shared<LookupDerivationFormula>(k_swingTable));
+    auto formula = std::make_shared<LookupDerivationFormula>(k_swingTable);
+    sa->setFormula(formula.get());
     auto ref = std::make_shared<ParentRef>();
     ref->setTargetIdString(QString::fromStdString(boost::uuids::to_string(ids::st())));
-    sa->addParent(ref);
+    sa->insertChild(1, ref); // Insert ParentRef after derivation formula
     s.swingDmg = sa;
   }
 
@@ -267,22 +278,53 @@ static auto findById(std::vector<std::shared_ptr<infrastructure::TreeItem>> cons
 
 static auto costPerLevelOf(Attribute const& attr) -> int
 {
-  if (!attr.hasDirectFormula()) {
+  auto* formula = attr.formula();
+  if (!formula) {
     return 0;
   }
-  auto* f = dynamic_cast<LinearFormula const*>(&attr.directFormula());
+  auto* f = dynamic_cast<LinearFormula const*>(formula);
   return f ? f->costPerLevel() : 0;
 }
 
 static auto derivationTypeOf(Attribute const& sa) -> boost::uuids::uuid
 {
-  auto* df = sa.derivationFormula();
+  auto* df = sa.formula();
   return df ? df->typeId() : boost::uuids::uuid{};
 }
 
 static auto parentIdStringOf(Attribute const& sa, int i) -> QString
 {
-  return sa.parentAt(i).targetIdString();
+  // ParentRef access through TreeItem hierarchy
+  if (i < 0 || i >= sa.size()) {
+    return QString{};
+  }
+
+  // Skip formula if present (both direct Formula and DerivationFormula inherit from Formula)
+  int offset = 0;
+  if (sa.size() > 0 && dynamic_cast<Formula const*>(sa.childAt(0).get())) {
+    offset = 1;
+  }
+
+  // ParentRefs come after formula
+  int parentIdx = offset + i;
+  if (parentIdx >= sa.size()) {
+    return QString{};
+  }
+
+  auto* ref = dynamic_cast<ParentRef const*>(sa.childAt(parentIdx).get());
+  return ref ? ref->targetIdString() : QString{};
+}
+
+// Helper to count ParentRef children (replaces parentCount() accessor)
+static auto countParents(Attribute const& sa) -> int
+{
+  int count = 0;
+  for (int i = 0; i < sa.size(); ++i) {
+    if (dynamic_cast<ParentRef const*>(sa.childAt(i).get()) != nullptr) {
+      ++count;
+    }
+  }
+  return count;
 }
 
 // ── Typed fixture ─────────────────────────────────────────────────────────────
@@ -390,7 +432,7 @@ TYPED_TEST(Gurps4RoundTripTest, SingleParentSecondariesUseScaledSumDivisorOne)
     auto* sa = dynamic_cast<Attribute*>(findById(this->rt, id));
     ASSERT_NE(sa, nullptr);
     EXPECT_EQ(derivationTypeOf(*sa), ScaledSumDerivationFormula::classId());
-    auto* df = dynamic_cast<ScaledSumDerivationFormula*>(sa->derivationFormula());
+    auto* df = dynamic_cast<ScaledSumDerivationFormula*>(sa->formula());
     ASSERT_NE(df, nullptr);
     EXPECT_EQ(df->divisor(), 1);
     EXPECT_EQ(df->coefficients(), (QList<int>{1}));
@@ -402,11 +444,11 @@ TYPED_TEST(Gurps4RoundTripTest, BasicSpeedUsesTwoParentsAndDivisorFour)
   auto* sa = dynamic_cast<Attribute*>(findById(this->rt, ids::basicSpeed()));
   ASSERT_NE(sa, nullptr);
   EXPECT_EQ(derivationTypeOf(*sa), ScaledSumDerivationFormula::classId());
-  auto* df = dynamic_cast<ScaledSumDerivationFormula*>(sa->derivationFormula());
+  auto* df = dynamic_cast<ScaledSumDerivationFormula*>(sa->formula());
   ASSERT_NE(df, nullptr);
   EXPECT_EQ(df->divisor(), 4);
   EXPECT_EQ(df->coefficients(), (QList<int>{1, 1}));
-  EXPECT_EQ(sa->parentCount(), 2);
+  EXPECT_EQ(countParents(*sa), 2);
 }
 
 TYPED_TEST(Gurps4RoundTripTest, BasicLiftUsesQuadraticDivisorFive)
@@ -414,7 +456,7 @@ TYPED_TEST(Gurps4RoundTripTest, BasicLiftUsesQuadraticDivisorFive)
   auto* sa = dynamic_cast<Attribute*>(findById(this->rt, ids::basicLift()));
   ASSERT_NE(sa, nullptr);
   EXPECT_EQ(derivationTypeOf(*sa), QuadraticDerivationFormula::classId());
-  auto* df = dynamic_cast<QuadraticDerivationFormula*>(sa->derivationFormula());
+  auto* df = dynamic_cast<QuadraticDerivationFormula*>(sa->formula());
   ASSERT_NE(df, nullptr);
   EXPECT_EQ(df->divisor(), 5);
 }
@@ -425,7 +467,7 @@ TYPED_TEST(Gurps4RoundTripTest, DamageLookupTablesHaveTwentyEntries)
     auto* sa = dynamic_cast<Attribute*>(findById(this->rt, id));
     ASSERT_NE(sa, nullptr);
     EXPECT_EQ(derivationTypeOf(*sa), LookupDerivationFormula::classId());
-    auto* df = dynamic_cast<LookupDerivationFormula*>(sa->derivationFormula());
+    auto* df = dynamic_cast<LookupDerivationFormula*>(sa->formula());
     ASSERT_NE(df, nullptr);
     EXPECT_EQ(static_cast<int>(df->table().size()), 20);
   }
@@ -435,7 +477,7 @@ TYPED_TEST(Gurps4RoundTripTest, ThrustDamageTableSpotChecks)
 {
   auto* sa = dynamic_cast<Attribute*>(findById(this->rt, ids::thrustDmg()));
   ASSERT_NE(sa, nullptr);
-  auto* df = dynamic_cast<LookupDerivationFormula*>(sa->derivationFormula());
+  auto* df = dynamic_cast<LookupDerivationFormula*>(sa->formula());
   ASSERT_NE(df, nullptr);
   auto const& table = df->table();
   EXPECT_EQ(table.at(1), -5); // ST 1 thrust
@@ -447,7 +489,7 @@ TYPED_TEST(Gurps4RoundTripTest, SwingDamageTableSpotChecks)
 {
   auto* sa = dynamic_cast<Attribute*>(findById(this->rt, ids::swingDmg()));
   ASSERT_NE(sa, nullptr);
-  auto* df = dynamic_cast<LookupDerivationFormula*>(sa->derivationFormula());
+  auto* df = dynamic_cast<LookupDerivationFormula*>(sa->formula());
   ASSERT_NE(df, nullptr);
   auto const& table = df->table();
   EXPECT_EQ(table.at(1), -3); // ST 1 swing
@@ -461,7 +503,7 @@ TYPED_TEST(Gurps4RoundTripTest, HPParentPointsToST)
 {
   auto* sa = dynamic_cast<Attribute*>(findById(this->rt, ids::hp()));
   ASSERT_NE(sa, nullptr);
-  ASSERT_EQ(sa->parentCount(), 1);
+  ASSERT_EQ(countParents(*sa), 1);
   EXPECT_EQ(parentIdStringOf(*sa, 0), QString::fromStdString(boost::uuids::to_string(ids::st())));
 }
 
@@ -469,7 +511,7 @@ TYPED_TEST(Gurps4RoundTripTest, WillParentPointsToIQ)
 {
   auto* sa = dynamic_cast<Attribute*>(findById(this->rt, ids::will()));
   ASSERT_NE(sa, nullptr);
-  ASSERT_EQ(sa->parentCount(), 1);
+  ASSERT_EQ(countParents(*sa), 1);
   EXPECT_EQ(parentIdStringOf(*sa, 0), QString::fromStdString(boost::uuids::to_string(ids::iq())));
 }
 
@@ -477,7 +519,7 @@ TYPED_TEST(Gurps4RoundTripTest, PerParentPointsToIQ)
 {
   auto* sa = dynamic_cast<Attribute*>(findById(this->rt, ids::per()));
   ASSERT_NE(sa, nullptr);
-  ASSERT_EQ(sa->parentCount(), 1);
+  ASSERT_EQ(countParents(*sa), 1);
   EXPECT_EQ(parentIdStringOf(*sa, 0), QString::fromStdString(boost::uuids::to_string(ids::iq())));
 }
 
@@ -485,7 +527,7 @@ TYPED_TEST(Gurps4RoundTripTest, FPParentPointsToHT)
 {
   auto* sa = dynamic_cast<Attribute*>(findById(this->rt, ids::fp()));
   ASSERT_NE(sa, nullptr);
-  ASSERT_EQ(sa->parentCount(), 1);
+  ASSERT_EQ(countParents(*sa), 1);
   EXPECT_EQ(parentIdStringOf(*sa, 0), QString::fromStdString(boost::uuids::to_string(ids::ht())));
 }
 
@@ -493,7 +535,7 @@ TYPED_TEST(Gurps4RoundTripTest, BasicSpeedParentsAreDXAndHT)
 {
   auto* sa = dynamic_cast<Attribute*>(findById(this->rt, ids::basicSpeed()));
   ASSERT_NE(sa, nullptr);
-  ASSERT_EQ(sa->parentCount(), 2);
+  ASSERT_EQ(countParents(*sa), 2);
   EXPECT_EQ(parentIdStringOf(*sa, 0), QString::fromStdString(boost::uuids::to_string(ids::dx())));
   EXPECT_EQ(parentIdStringOf(*sa, 1), QString::fromStdString(boost::uuids::to_string(ids::ht())));
 }
@@ -502,7 +544,7 @@ TYPED_TEST(Gurps4RoundTripTest, BasicMoveParentPointsToBasicSpeed)
 {
   auto* sa = dynamic_cast<Attribute*>(findById(this->rt, ids::basicMove()));
   ASSERT_NE(sa, nullptr);
-  ASSERT_EQ(sa->parentCount(), 1);
+  ASSERT_EQ(countParents(*sa), 1);
   EXPECT_EQ(parentIdStringOf(*sa, 0),
             QString::fromStdString(boost::uuids::to_string(ids::basicSpeed())));
 }
@@ -511,7 +553,7 @@ TYPED_TEST(Gurps4RoundTripTest, BasicLiftParentPointsToST)
 {
   auto* sa = dynamic_cast<Attribute*>(findById(this->rt, ids::basicLift()));
   ASSERT_NE(sa, nullptr);
-  ASSERT_EQ(sa->parentCount(), 1);
+  ASSERT_EQ(countParents(*sa), 1);
   EXPECT_EQ(parentIdStringOf(*sa, 0), QString::fromStdString(boost::uuids::to_string(ids::st())));
 }
 
@@ -519,7 +561,7 @@ TYPED_TEST(Gurps4RoundTripTest, ThrustDmgParentPointsToST)
 {
   auto* sa = dynamic_cast<Attribute*>(findById(this->rt, ids::thrustDmg()));
   ASSERT_NE(sa, nullptr);
-  ASSERT_EQ(sa->parentCount(), 1);
+  ASSERT_EQ(countParents(*sa), 1);
   EXPECT_EQ(parentIdStringOf(*sa, 0), QString::fromStdString(boost::uuids::to_string(ids::st())));
 }
 
@@ -527,7 +569,7 @@ TYPED_TEST(Gurps4RoundTripTest, SwingDmgParentPointsToST)
 {
   auto* sa = dynamic_cast<Attribute*>(findById(this->rt, ids::swingDmg()));
   ASSERT_NE(sa, nullptr);
-  ASSERT_EQ(sa->parentCount(), 1);
+  ASSERT_EQ(countParents(*sa), 1);
   EXPECT_EQ(parentIdStringOf(*sa, 0), QString::fromStdString(boost::uuids::to_string(ids::st())));
 }
 

@@ -1,6 +1,8 @@
 #include <attribute.hpp>
 #include <attributeContainer.hpp>
 #include <attributeListModel.hpp>
+#include <objectFactory.hpp>
+#include <registration.hpp>
 
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
@@ -20,6 +22,10 @@ static int _resourceInit = qInitResources_qml();
 int main(int argc, char* argv[])
 {
   QGuiApplication app(argc, argv);
+
+  // Create and register object factory
+  auto factory = std::make_unique<infrastructure::ObjectFactory>();
+  gurps_system::registerSystemObjects(*factory);
 
   // Create a container for attributes
   auto container = std::make_shared<gurps_system::AttributeContainer>();
@@ -61,7 +67,7 @@ int main(int argc, char* argv[])
   container->insertChild(6, perception);
 
   // Create the list model
-  auto* listModel = new gurps_system::gui::AttributeListModel(&app);
+  auto* listModel = new gurps_system::gui::AttributeListModel(factory.get(), &app);
   listModel->setContainer(container.get());
 
   // Set up QML engine

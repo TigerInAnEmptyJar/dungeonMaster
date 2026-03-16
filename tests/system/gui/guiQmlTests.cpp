@@ -1,5 +1,7 @@
 #include <QtQuickTest/quicktest.h>
 
+#include "qmlTestSetup.hpp"
+
 /**
  * \brief Qt Quick Test runner for GUI QML components.
  *
@@ -18,4 +20,4 @@ extern int qInitResources_qml();
 // Force initialization by referencing the function in a global initializer
 static int _resourceInit = qInitResources_qml();
 
-QUICK_TEST_MAIN(SystemGuiQmlTests)
+QUICK_TEST_MAIN_WITH_SETUP(SystemGuiQmlTests, QmlTestSetup)

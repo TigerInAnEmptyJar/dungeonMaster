@@ -6,13 +6,23 @@
 
 #include <boost/uuid/string_generator.hpp>
 
+#include <memory>
 #include <stdexcept>
 
 namespace gurps_system {
 
 // ── Construction ──────────────────────────────────────────────────────────────
 
-Attribute::Attribute(boost::uuids::uuid objectId) : BaseObject{objectId} {}
+Attribute::Attribute(boost::uuids::uuid objectId) : BaseObject{objectId}
+{
+  connect(this, &Attribute::childInserted, this, [this](int index) {
+    // Emit formulaChanged if the inserted child is a Formula (covers both direct and derivation
+    // formulas)
+    if (dynamic_cast<Formula*>(childAt(index).get())) {
+      Q_EMIT formulaChanged();
+    }
+  });
+}
 
 Attribute::~Attribute() = default;
 
@@ -26,90 +36,40 @@ auto Attribute::classId() -> boost::uuids::uuid
 
 auto Attribute::typeId() const -> boost::uuids::uuid { return classId(); }
 
-// ── Direct formula ────────────────────────────────────────────────────────────
+// ── Formula access ────────────────────────────────────────────────────────────
 
-auto Attribute::insertDirectFormula(std::shared_ptr<Formula> formula) -> void
+auto Attribute::formula() const -> infrastructure::TreeItem*
 {
-  if (hasDirectFormula()) {
-    throw std::logic_error{"Attribute: direct formula already present"};
-  }
-  insertChild(size(), std::move(formula));
-}
-
-auto Attribute::hasDirectFormula() const -> bool
-{
-  for (int i = 0; i < size(); ++i) {
-    if (dynamic_cast<Formula*>(childAt(i).get()) != nullptr) {
-      return true;
+  // Check first child for formula (both direct Formula and DerivationFormula inherit from Formula)
+  if (size() > 0) {
+    if (auto f = std::dynamic_pointer_cast<Formula>(childAt(0))) {
+      return f.get();
     }
   }
-  return false;
+
+  return nullptr;
 }
 
-auto Attribute::directFormula() const -> Formula const&
+auto Attribute::setFormula(infrastructure::TreeItem* aFormula) -> void
 {
-  for (int i = 0; i < size(); ++i) {
-    if (auto* f = dynamic_cast<Formula*>(childAt(i).get())) {
-      return *f;
+  if (aFormula && !dynamic_cast<Formula*>(aFormula)) {
+    throw std::invalid_argument{"setFormula: provided object does not inherit from Formula"};
+  }
+
+  if (size() > 0) {
+    // Replace or remove existing formula
+    if (aFormula) {
+      this->swapChild(childAt(0), aFormula->shared_from_this());
+    } else {
+      // Remove the formula
+      this->removeChild(childAt(0));
     }
+  } else if (aFormula) {
+    // Insert new formula at position 0
+    insertChild(0, aFormula->shared_from_this());
   }
-  throw std::logic_error{"Attribute: no direct formula — call insertDirectFormula() first"};
-}
 
-// ── Derivation ────────────────────────────────────────────────────────────────
-
-auto Attribute::insertDerivationFormula(std::shared_ptr<DerivationFormula> formula) -> void
-{
-  if (derivationFormula() != nullptr) {
-    throw std::logic_error{"Attribute: derivation formula already present"};
-  }
-  insertChild(0, std::move(formula));
-}
-
-auto Attribute::derivationFormula() const -> DerivationFormula*
-{
-  if (size() == 0) {
-    return nullptr;
-  }
-  return dynamic_cast<DerivationFormula*>(childAt(0).get());
-}
-
-auto Attribute::addParent(std::shared_ptr<ParentRef> ref) -> void
-{
-  // Insert before the first Formula child (if any); otherwise append.
-  int pos = size();
-  for (int i = 0; i < size(); ++i) {
-    if (dynamic_cast<Formula*>(childAt(i).get()) != nullptr) {
-      pos = i;
-      break;
-    }
-  }
-  insertChild(pos, std::move(ref));
-}
-
-auto Attribute::parentCount() const -> int
-{
-  int count = 0;
-  for (int i = 0; i < size(); ++i) {
-    if (dynamic_cast<ParentRef*>(childAt(i).get()) != nullptr) {
-      ++count;
-    }
-  }
-  return count;
-}
-
-auto Attribute::parentAt(int i) const -> ParentRef const&
-{
-  int count = 0;
-  for (int j = 0; j < size(); ++j) {
-    if (auto* pr = dynamic_cast<ParentRef*>(childAt(j).get())) {
-      if (count == i) {
-        return *pr;
-      }
-      ++count;
-    }
-  }
-  throw std::out_of_range{"Attribute::parentAt: index out of range"};
+  Q_EMIT formulaChanged();
 }
 
 } // namespace gurps_system

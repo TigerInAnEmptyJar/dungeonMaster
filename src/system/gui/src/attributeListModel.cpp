@@ -2,9 +2,12 @@
 
 #include <attribute.hpp>
 #include <baseObject.hpp>
+#include <objectFactory.hpp>
+#include <registration.hpp>
 #include <treeItem.hpp>
 
 #include <QDebug>
+#include <QMetaObject>
 #include <QVariant>
 
 // Register Attribute* as a metatype so it can be used with QVariant
@@ -17,13 +20,15 @@ namespace gurps_system::gui {
 struct AttributeListModel::Impl
 {
   infrastructure::TreeItem* container{nullptr};
+  infrastructure::ObjectFactory* factory{nullptr};
 };
 
 // ── Construction ──────────────────────────────────────────────────────────────
 
-AttributeListModel::AttributeListModel(QObject* parent)
+AttributeListModel::AttributeListModel(infrastructure::ObjectFactory* factory, QObject* parent)
     : QAbstractListModel{parent}, _p{std::make_unique<Impl>()}
 {
+  _p->factory = factory;
 }
 
 AttributeListModel::~AttributeListModel() = default;
@@ -197,6 +202,86 @@ bool AttributeListModel::removeAttribute(int row)
   }
 
   _p->container->removeChild(child);
+  return true;
+}
+
+// ── Formula management ────────────────────────────────────────────────────────
+
+int AttributeListModel::getFormulaType(infrastructure::TreeItem* formula) const
+{
+  if (!formula) {
+    return 0; // None
+  }
+
+  auto typeId = formula->typeId();
+
+  // Check against known formula type IDs
+  if (typeId == gurps_system::formulaTypeToClassId(gurps_system::FormulaType::Linear)) {
+    return 1;
+  }
+  if (typeId == gurps_system::formulaTypeToClassId(gurps_system::FormulaType::Lookup)) {
+    return 2;
+  }
+  if (typeId ==
+      gurps_system::formulaTypeToClassId(gurps_system::FormulaType::ScaledSumDerivation)) {
+    return 3;
+  }
+  if (typeId ==
+      gurps_system::formulaTypeToClassId(gurps_system::FormulaType::QuadraticDerivation)) {
+    return 4;
+  }
+  if (typeId == gurps_system::formulaTypeToClassId(gurps_system::FormulaType::LookupDerivation)) {
+    return 5;
+  }
+
+  return 0; // Unknown/None
+}
+
+bool AttributeListModel::setAttributeFormulaType(gurps_system::Attribute* attribute,
+                                                 int formulaTypeIndex)
+{
+  if (!attribute) {
+    qWarning() << "AttributeListModel::setAttributeFormulaType: null attribute";
+    return false;
+  }
+
+  if (!_p->factory) {
+    qWarning() << "AttributeListModel::setAttributeFormulaType: no ObjectFactory set";
+    return false;
+  }
+
+  // Handle "None" - remove formula
+  if (formulaTypeIndex == 0) {
+    attribute->setFormula(nullptr);
+    return true;
+  }
+
+  // Map index to FormulaType enum
+  auto formulaType = static_cast<gurps_system::FormulaType>(formulaTypeIndex);
+  auto classId = gurps_system::formulaTypeToClassId(formulaType);
+
+  if (classId.is_nil()) {
+    qWarning() << "AttributeListModel::setAttributeFormulaType: invalid formula type"
+               << formulaTypeIndex;
+    return false;
+  }
+
+  // Create formula via factory
+  auto newFormula = _p->factory->create(classId);
+  if (!newFormula) {
+    qWarning() << "AttributeListModel::setAttributeFormulaType: factory failed to create formula";
+    return false;
+  }
+
+  // Set default property values using Qt's property system
+  auto* formulaObj = dynamic_cast<QObject*>(newFormula.get());
+  if (!formulaObj) {
+    qWarning() << "AttributeListModel::setAttributeFormulaType: created object is not a QObject";
+    return false;
+  }
+
+  // Attach to attribute
+  attribute->setFormula(newFormula.get());
   return true;
 }
 

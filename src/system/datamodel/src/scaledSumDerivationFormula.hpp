@@ -1,6 +1,6 @@
 #pragma once
 
-#include <derivationFormula.hpp>
+#include <formula.hpp>
 
 #include <QList>
 
@@ -25,7 +25,7 @@ namespace gurps_system {
  * \pre \c divisor > 0
  * \pre \c coefficients is non-empty
  */
-class ScaledSumDerivationFormula final : public DerivationFormula
+class ScaledSumDerivationFormula final : public Formula
 {
   Q_OBJECT
 

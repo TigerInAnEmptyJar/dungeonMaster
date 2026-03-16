@@ -1,6 +1,6 @@
 #pragma once
 
-#include <derivationFormula.hpp>
+#include <formula.hpp>
 
 namespace gurps_system {
 
@@ -20,7 +20,7 @@ namespace gurps_system {
  *
  * \pre \c divisor > 0
  */
-class QuadraticDerivationFormula final : public DerivationFormula
+class QuadraticDerivationFormula final : public Formula
 {
   Q_OBJECT
 
@@ -51,7 +51,7 @@ public:
   auto setDivisor(int value) -> void;
 
 private:
-  int _divisor;
+  int _divisor = 5;
 };
 
 } // namespace gurps_system

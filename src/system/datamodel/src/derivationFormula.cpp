@@ -2,12 +2,11 @@
 
 #include <boost/uuid/string_generator.hpp>
 
+#include <stdexcept>
+
 namespace gurps_system {
 
-DerivationFormula::DerivationFormula(boost::uuids::uuid objectId)
-    : infrastructure::TreeItem{objectId}
-{
-}
+DerivationFormula::DerivationFormula(boost::uuids::uuid objectId) : Formula{objectId} {}
 
 auto DerivationFormula::classId() -> boost::uuids::uuid
 {

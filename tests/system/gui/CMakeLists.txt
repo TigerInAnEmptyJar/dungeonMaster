@@ -8,12 +8,18 @@ my_add_test(SystemGuiModelTests
     Qt6::Test
   SOURCE
     attributeListModelTest.cpp
+  INCLUDES
+    PRIVATE ${CMAKE_SOURCE_DIR}/src/system/datamodel/src
 )
 
 # QML Quick Tests
 my_add_qml_test(SystemGuiQmlTests
+  AUTOMOC
+  HEADER
+    qmlTestSetup.hpp
   SOURCE
     guiQmlTests.cpp
+    qmlTestSetup.cpp
   QML_FILES
     tst_attributeListView.qml
     tst_attributeDetailView.qml

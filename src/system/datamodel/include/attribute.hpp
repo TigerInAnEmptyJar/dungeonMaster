@@ -50,45 +50,32 @@ public:
   static auto classId() -> boost::uuids::uuid;
   auto typeId() const -> boost::uuids::uuid override;
 
-  // ── Direct formula (CP → bonus) ───────────────────────────────────────────
+  // ── Formula access ────────────────────────────────────────────────────────
 
   /**
-   * \brief Appends a CP-to-bonus formula as the last child.
-   * \throws std::logic_error if a direct formula is already present.
+   * \brief Returns the formula as a QObject pointer for unified access.
+   *
+   * Returns the formula at position 0 (either DerivationFormula or Formula).
+   * This unified accessor allows QML and C++ code to work with both formula types through
+   * the same interface.
+   *
+   * \returns The formula object, or nullptr if no formula has been attached.
    */
-  auto insertDirectFormula(std::shared_ptr<Formula> formula) -> void;
-
-  /** Returns \c true if a direct formula has been attached. */
-  auto hasDirectFormula() const -> bool;
+  Q_INVOKABLE infrastructure::TreeItem* formula() const;
 
   /**
-   * \brief Returns the direct formula.
-   * \throws std::logic_error if no direct formula has been attached.
+   * \brief Sets (replaces) the formula by swapping child 0.
+   *
+   * If a formula already exists at position 0, it is replaced.
+   * Otherwise, the formula is inserted at position 0.
+   * Emits formulaChanged() signal.
+   *
+   * \param formula The new formula to set (must inherit from Formula)
    */
-  auto directFormula() const -> Formula const&;
+  Q_INVOKABLE void setFormula(infrastructure::TreeItem* aFormula);
 
-  // ── Derivation (secondary attributes) ────────────────────────────────────
-
-  /**
-   * \brief Inserts the derivation formula as child 0.
-   * \throws std::logic_error if a derivation formula is already present.
-   */
-  auto insertDerivationFormula(std::shared_ptr<DerivationFormula> formula) -> void;
-
-  /** Returns the derivation formula, or \c nullptr if absent. */
-  auto derivationFormula() const -> DerivationFormula*;
-
-  /** Appends a parent reference, inserted before any direct-formula child. */
-  auto addParent(std::shared_ptr<ParentRef> ref) -> void;
-
-  /** Returns the number of parent references. */
-  auto parentCount() const -> int;
-
-  /**
-   * \brief Returns the i-th parent reference.
-   * \throws std::out_of_range if \p i is out of bounds.
-   */
-  auto parentAt(int i) const -> ParentRef const&;
+Q_SIGNALS:
+  void formulaChanged();
 };
 
 } // namespace gurps_system

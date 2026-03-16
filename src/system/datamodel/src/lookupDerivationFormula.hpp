@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cpTable.hpp>
-#include <derivationFormula.hpp>
+#include <formula.hpp>
 
 namespace gurps_system {
 
@@ -21,7 +21,7 @@ namespace gurps_system {
  *
  * \pre The table must be non-empty.
  */
-class LookupDerivationFormula final : public DerivationFormula
+class LookupDerivationFormula final : public Formula
 {
   Q_OBJECT
 

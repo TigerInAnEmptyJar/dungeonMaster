@@ -9,7 +9,7 @@ namespace gurps_system {
 // ── Construction ──────────────────────────────────────────────────────────────
 
 LookupDerivationFormula::LookupDerivationFormula(CpTable table, boost::uuids::uuid objectId)
-    : DerivationFormula(objectId), _table(std::move(table))
+    : Formula(objectId), _table(std::move(table))
 {
   if (_table.empty()) {
     throw std::invalid_argument{"LookupDerivationFormula: table must not be empty"};

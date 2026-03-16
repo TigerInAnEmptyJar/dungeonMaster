@@ -1,4 +1,4 @@
-#include <derivationFormula.hpp>
+// #include <derivationFormula.hpp>
 #include <lookupDerivationFormula.hpp>
 #include <quadraticDerivationFormula.hpp>
 #include <scaledSumDerivationFormula.hpp>
@@ -25,11 +25,6 @@ TEST(ScaledSumDerivationFormulaTest, ClassIdIsNonNil)
 TEST(ScaledSumDerivationFormulaTest, ClassIdIsStable)
 {
   EXPECT_EQ(ScaledSumDerivationFormula::classId(), ScaledSumDerivationFormula::classId());
-}
-
-TEST(ScaledSumDerivationFormulaTest, ClassIdDiffersFromDerivationFormulaClassId)
-{
-  EXPECT_NE(ScaledSumDerivationFormula::classId(), DerivationFormula::classId());
 }
 
 TEST(ScaledSumDerivationFormulaTest, TypeIdMatchesClassId)

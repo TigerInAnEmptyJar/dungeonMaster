@@ -1,12 +1,12 @@
 #include <registration.hpp>
 
 #include <attribute.hpp>
-#include <derivationFormula.hpp>
+#include <objectFactory.hpp>
+#include <parentRef.hpp>
+
 #include <linearFormula.hpp>
 #include <lookupDerivationFormula.hpp>
 #include <lookupFormula.hpp>
-#include <objectFactory.hpp>
-#include <parentRef.hpp>
 #include <quadraticDerivationFormula.hpp>
 #include <scaledSumDerivationFormula.hpp>
 
@@ -66,7 +66,7 @@ TEST_F(RegistrationTest, LookupDerivationFormulaIsRegistered)
   EXPECT_TRUE(factory.isInstalled(LookupDerivationFormula::classId()));
 }
 
-TEST_F(RegistrationTest, AllSevenTypesRegistered) { EXPECT_EQ(factory.installedCount(), 7); }
+TEST_F(RegistrationTest, AllTypesRegistered) { EXPECT_EQ(factory.installedCount(), 7); }
 
 // ── Factory creation ──────────────────────────────────────────────────────────
 

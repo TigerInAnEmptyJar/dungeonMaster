@@ -22,10 +22,6 @@ auto LinearFormula::classId() -> boost::uuids::uuid
 
 auto LinearFormula::typeId() const -> boost::uuids::uuid { return classId(); }
 
-auto LinearFormula::levelBonus(int investedCp) const -> int { return investedCp / _costPerLevel; }
-
-auto LinearFormula::cpCost(int levelBonus) const -> int { return levelBonus * _costPerLevel; }
-
 auto LinearFormula::costPerLevel() const -> int { return _costPerLevel; }
 
 auto LinearFormula::setCostPerLevel(int value) -> void

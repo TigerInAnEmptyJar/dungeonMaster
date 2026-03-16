@@ -1,6 +1,6 @@
 #pragma once
 
-#include <treeItem.hpp>
+#include <formula.hpp>
 
 namespace gurps_system {
 
@@ -12,6 +12,9 @@ namespace gurps_system {
  * Instance-level code dispatches on \c typeId() to select the appropriate
  * evaluation strategy and reads the parameters from the concrete subclass.
  *
+ * Inherits from Formula to provide a unified base class for all formula types.
+ * The CP-related methods (levelBonus/cpCost) are not applicable and will throw.
+ *
  * Concrete subclasses:
  *   - \c ScaledSumDerivationFormula  – weighted sum divided by a divisor
  *   - \c QuadraticDerivationFormula  – single input squared, divided by a divisor
@@ -20,7 +23,7 @@ namespace gurps_system {
  * Stored as a child of \c SecondaryAttribute, identified at runtime by
  * \c dynamic_cast<DerivationFormula*>.
  */
-class DerivationFormula : public infrastructure::TreeItem
+class DerivationFormula : public Formula
 {
   Q_OBJECT
 
@@ -36,7 +39,7 @@ public:
   // ── Identity ──────────────────────────────────────────────────────────────
 
   static auto classId() -> boost::uuids::uuid;
-  // typeId() remains pure virtual through infrastructure::TreeItem;
+  // typeId() remains pure virtual through Formula;
   // concrete subclasses must override it.
 };
 

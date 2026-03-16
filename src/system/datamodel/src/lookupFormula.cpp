@@ -28,21 +28,6 @@ auto LookupFormula::classId() -> boost::uuids::uuid
 
 auto LookupFormula::typeId() const -> boost::uuids::uuid { return classId(); }
 
-auto LookupFormula::levelBonus(int investedCp) const -> int
-{
-  int result = 0;
-  for (auto const& [bonus, cost] : _table) {
-    if (cost <= investedCp) {
-      result = bonus;
-    } else {
-      break;
-    }
-  }
-  return result;
-}
-
-auto LookupFormula::cpCost(int levelBonus) const -> int { return _table.at(levelBonus); }
-
 auto LookupFormula::table() const -> CpTable const& { return _table; }
 
 auto LookupFormula::setTable(CpTable table) -> void

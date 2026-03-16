@@ -10,7 +10,7 @@ namespace gurps_system {
 
 ScaledSumDerivationFormula::ScaledSumDerivationFormula(QList<int> coefficients, int divisor,
                                                        boost::uuids::uuid objectId)
-    : DerivationFormula{objectId}, _coefficients{std::move(coefficients)}, _divisor{divisor}
+    : Formula{objectId}, _coefficients{std::move(coefficients)}, _divisor{divisor}
 {
   static bool const registered [[maybe_unused]] = [] {
     qRegisterMetaType<QList<int>>();
