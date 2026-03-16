@@ -10,6 +10,5 @@ my_add_test(SystemDatamodelTests
     formulaTest.cpp
     attributeTest.cpp
     derivationFormulaTest.cpp
-    secondaryAttributeTest.cpp
     registrationTest.cpp
 )

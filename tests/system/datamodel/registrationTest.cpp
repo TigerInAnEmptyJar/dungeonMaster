@@ -9,7 +9,6 @@
 #include <parentRef.hpp>
 #include <quadraticDerivationFormula.hpp>
 #include <scaledSumDerivationFormula.hpp>
-#include <secondaryAttribute.hpp>
 
 #include <boost/uuid/string_generator.hpp>
 
@@ -47,11 +46,6 @@ TEST_F(RegistrationTest, LookupFormulaIsRegistered)
   EXPECT_TRUE(factory.isInstalled(LookupFormula::classId()));
 }
 
-TEST_F(RegistrationTest, SecondaryAttributeIsRegistered)
-{
-  EXPECT_TRUE(factory.isInstalled(SecondaryAttribute::classId()));
-}
-
 TEST_F(RegistrationTest, ParentRefIsRegistered)
 {
   EXPECT_TRUE(factory.isInstalled(ParentRef::classId()));
@@ -72,7 +66,7 @@ TEST_F(RegistrationTest, LookupDerivationFormulaIsRegistered)
   EXPECT_TRUE(factory.isInstalled(LookupDerivationFormula::classId()));
 }
 
-TEST_F(RegistrationTest, AllEightTypesRegistered) { EXPECT_EQ(factory.installedCount(), 8); }
+TEST_F(RegistrationTest, AllSevenTypesRegistered) { EXPECT_EQ(factory.installedCount(), 7); }
 
 // ── Factory creation ──────────────────────────────────────────────────────────
 
@@ -106,12 +100,6 @@ TEST_F(RegistrationTest, CreateLookupFormulaReturnsLookupFormula)
   EXPECT_NE(dynamic_cast<LookupFormula*>(obj.get()), nullptr);
 }
 
-TEST_F(RegistrationTest, CreateSecondaryAttributeReturnsSecondaryAttribute)
-{
-  auto obj = factory.create(SecondaryAttribute::classId());
-  EXPECT_NE(dynamic_cast<SecondaryAttribute*>(obj.get()), nullptr);
-}
-
 TEST_F(RegistrationTest, CreateParentRefReturnsParentRef)
 {
   auto obj = factory.create(ParentRef::classId());
@@ -141,5 +129,5 @@ TEST_F(RegistrationTest, CreateLookupDerivationFormulaReturnsCorrectType)
 TEST_F(RegistrationTest, CallingRegisterTwiceDoesNotAddDuplicates)
 {
   registerSystemObjects(factory); // second call — install() returns false, no throw
-  EXPECT_EQ(factory.installedCount(), 8);
+  EXPECT_EQ(factory.installedCount(), 7);
 }

@@ -1,8 +1,10 @@
 #include <attribute.hpp>
 #include <baseObject.hpp>
+#include <derivationFormula.hpp>
 #include <formula.hpp>
 #include <linearFormula.hpp>
-#include <lookupFormula.hpp>
+#include <parentRef.hpp>
+#include <scaledSumDerivationFormula.hpp>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -16,11 +18,10 @@ using namespace gurps_system;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-// Creates a heap-managed Attribute with a 10-CP/level linear formula attached.
 static auto makeAttrWithFormula() -> std::shared_ptr<Attribute>
 {
   auto attr = std::make_shared<Attribute>();
-  attr->insertChild(0, std::make_shared<LinearFormula>(10));
+  attr->insertDirectFormula(std::make_shared<LinearFormula>(10));
   return attr;
 }
 
@@ -29,7 +30,6 @@ static auto makeAttrWithFormula() -> std::shared_ptr<Attribute>
 class AttributeTest : public ::testing::Test
 {
 protected:
-  // Attribute with a 10 CP-per-level linear formula (GURPS 4e ST/HT pattern)
   std::shared_ptr<Attribute> attr{makeAttrWithFormula()};
 };
 
@@ -48,55 +48,45 @@ TEST_F(AttributeTest, TypeIdMatchesClassId) { EXPECT_EQ(attr->typeId(), Attribut
 
 TEST_F(AttributeTest, ObjectIdIsNonNil) { EXPECT_FALSE(attr->objectId().is_nil()); }
 
-// ── Creation without formula ──────────────────────────────────────────────────
+// ── Creation ──────────────────────────────────────────────────────────────────
 
 TEST_F(AttributeTest, CreateWithoutFormulaSucceeds)
 {
   EXPECT_NO_THROW(std::make_shared<Attribute>());
 }
 
-TEST_F(AttributeTest, LevelThrowsWhenNoFormulaChild)
+// ── Direct formula ────────────────────────────────────────────────────────────
+
+TEST_F(AttributeTest, HasDirectFormulaFalseOnFreshAttribute)
 {
-  auto attr = std::make_shared<Attribute>();
-  EXPECT_THROW(attr->level(0), std::logic_error);
+  auto a = std::make_shared<Attribute>();
+  EXPECT_FALSE(a->hasDirectFormula());
 }
 
-TEST_F(AttributeTest, CpForLevelBonusThrowsWhenNoFormulaChild)
+TEST_F(AttributeTest, HasDirectFormulaTrueAfterInsert) { EXPECT_TRUE(attr->hasDirectFormula()); }
+
+TEST_F(AttributeTest, InsertDirectFormulaAddsOneChild)
 {
-  auto attr = std::make_shared<Attribute>();
-  EXPECT_THROW(attr->cpForLevelBonus(1), std::logic_error);
+  auto a = std::make_shared<Attribute>();
+  a->insertDirectFormula(std::make_shared<LinearFormula>(10));
+  EXPECT_EQ(a->size(), 1);
 }
 
-// ── level() ───────────────────────────────────────────────────────────────────
-
-TEST_F(AttributeTest, LevelWithZeroCpIsTen)
+TEST_F(AttributeTest, InsertDirectFormulaTwiceThrows)
 {
-  EXPECT_EQ(attr->level(0), 10); // base=10, bonus=0
+  EXPECT_THROW(attr->insertDirectFormula(std::make_shared<LinearFormula>(5)), std::logic_error);
 }
 
-TEST_F(AttributeTest, LevelIncreasesWithInvestedCp)
+TEST_F(AttributeTest, DirectFormulaThrowsWhenAbsent)
 {
-  EXPECT_EQ(attr->level(10), 11); // formula: 10/10 = bonus 1 → level 11
+  auto a = std::make_shared<Attribute>();
+  EXPECT_THROW(std::ignore = a->directFormula(), std::logic_error);
 }
 
-TEST_F(AttributeTest, LevelEqualsBasePlusFormulaBonus)
+TEST_F(AttributeTest, DirectFormulaReturnsInsertedFormula)
 {
-  EXPECT_EQ(attr->level(20), 12); // base 10 + bonus 2
+  EXPECT_NE(dynamic_cast<LinearFormula const*>(&attr->directFormula()), nullptr);
 }
-
-TEST_F(AttributeTest, LevelWithNegativeCpDecreasesLevel)
-{
-  EXPECT_EQ(attr->level(-10), 9); // formula: -10/10 = bonus -1 → level 9
-}
-
-// ── cpForLevelBonus ───────────────────────────────────────────────────────────
-
-TEST_F(AttributeTest, CpForLevelBonusDelegatesToFormula)
-{
-  EXPECT_EQ(attr->cpForLevelBonus(3), 30); // 3 * costPerLevel(10)
-}
-
-// ── Formula as first child ────────────────────────────────────────────────────
 
 TEST_F(AttributeTest, FormulaIsFirstChild) { EXPECT_NE(attr->childAt(0), nullptr); }
 
@@ -105,25 +95,100 @@ TEST_F(AttributeTest, FirstChildIsAFormula)
   EXPECT_NE(dynamic_cast<Formula*>(attr->childAt(0).get()), nullptr);
 }
 
-// ── Formula independence ──────────────────────────────────────────────────────
+// ── Derivation formula ────────────────────────────────────────────────────────
 
-TEST_F(AttributeTest, TwoAttributesWithDifferentFormulasDifferInLevel)
-{
-  // DX/IQ formula: 20 CP per level
-  auto dxAttr = std::make_shared<Attribute>();
-  dxAttr->insertChild(0, std::make_shared<LinearFormula>(20));
-
-  EXPECT_EQ(attr->level(20), 12);   // ST formula: bonus = 20/10 = 2 → level 12
-  EXPECT_EQ(dxAttr->level(20), 11); // DX formula: bonus = 20/20 = 1 → level 11
-}
-
-TEST_F(AttributeTest, LookupFormulaWorksWithAttribute)
+TEST_F(AttributeTest, DerivationFormulaIsNullptrOnFreshAttribute)
 {
   auto a = std::make_shared<Attribute>();
-  a->insertChild(
-      0, std::make_shared<LookupFormula>(std::map<int, int>{{0, 0}, {1, 10}, {2, 25}, {3, 45}}));
+  EXPECT_EQ(a->derivationFormula(), nullptr);
+}
 
-  EXPECT_EQ(a->level(25), 12); // base 10 + bonus 2
+TEST_F(AttributeTest, InsertDerivationFormulaSucceeds)
+{
+  auto a = std::make_shared<Attribute>();
+  EXPECT_NO_THROW(
+      a->insertDerivationFormula(std::make_shared<ScaledSumDerivationFormula>(QList<int>{1}, 1)));
+}
+
+TEST_F(AttributeTest, InsertDerivationFormulaPlacesItAtIndexZero)
+{
+  auto a = std::make_shared<Attribute>();
+  a->insertDerivationFormula(std::make_shared<ScaledSumDerivationFormula>(QList<int>{1}, 1));
+  EXPECT_NE(dynamic_cast<DerivationFormula*>(a->childAt(0).get()), nullptr);
+}
+
+TEST_F(AttributeTest, InsertDerivationFormulaTwiceThrows)
+{
+  auto a = std::make_shared<Attribute>();
+  a->insertDerivationFormula(std::make_shared<ScaledSumDerivationFormula>(QList<int>{1}, 1));
+  EXPECT_THROW(
+      a->insertDerivationFormula(std::make_shared<ScaledSumDerivationFormula>(QList<int>{1}, 1)),
+      std::logic_error);
+}
+
+TEST_F(AttributeTest, DerivationFormulaReturnsInsertedFormula)
+{
+  auto a = std::make_shared<Attribute>();
+  a->insertDerivationFormula(std::make_shared<ScaledSumDerivationFormula>(QList<int>{1}, 1));
+  EXPECT_NE(dynamic_cast<ScaledSumDerivationFormula*>(a->derivationFormula()), nullptr);
+}
+
+TEST_F(AttributeTest, DerivationFormulaRemainsAtIndexZeroAfterDirectFormulaInserted)
+{
+  auto a = std::make_shared<Attribute>();
+  a->insertDerivationFormula(std::make_shared<ScaledSumDerivationFormula>(QList<int>{1}, 1));
+  a->insertDirectFormula(std::make_shared<LinearFormula>(5));
+  EXPECT_NE(dynamic_cast<DerivationFormula*>(a->childAt(0).get()), nullptr);
+}
+
+// ── Parent references ─────────────────────────────────────────────────────────
+
+TEST_F(AttributeTest, ParentCountIsZeroOnFreshAttribute)
+{
+  EXPECT_EQ(std::make_shared<Attribute>()->parentCount(), 0);
+}
+
+TEST_F(AttributeTest, AddParentIncreasesParentCount)
+{
+  auto a = std::make_shared<Attribute>();
+  a->addParent(std::make_shared<ParentRef>());
+  EXPECT_EQ(a->parentCount(), 1);
+}
+
+TEST_F(AttributeTest, AddTwoParentsGivesParentCountTwo)
+{
+  auto a = std::make_shared<Attribute>();
+  a->addParent(std::make_shared<ParentRef>());
+  a->addParent(std::make_shared<ParentRef>());
+  EXPECT_EQ(a->parentCount(), 2);
+}
+
+TEST_F(AttributeTest, ParentAtZeroReturnsInsertedParent)
+{
+  auto a = std::make_shared<Attribute>();
+  auto ref = std::make_shared<ParentRef>();
+  ref->setTargetIdString("aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee");
+  a->addParent(ref);
+  EXPECT_EQ(a->parentAt(0).targetIdString(), "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee");
+}
+
+TEST_F(AttributeTest, ParentAtOutOfRangeThrows)
+{
+  auto a = std::make_shared<Attribute>();
+  EXPECT_THROW(std::ignore = a->parentAt(0), std::out_of_range);
+}
+
+TEST_F(AttributeTest, ParentInsertedBeforeDirectFormula)
+{
+  // Layout: [DerivationFormula, ParentRef, DirectFormula]
+  auto a = std::make_shared<Attribute>();
+  a->insertDerivationFormula(std::make_shared<ScaledSumDerivationFormula>(QList<int>{1}, 1));
+  a->insertDirectFormula(std::make_shared<LinearFormula>(5));
+  a->addParent(std::make_shared<ParentRef>());
+  ASSERT_EQ(a->size(), 3);
+  EXPECT_NE(dynamic_cast<DerivationFormula*>(a->childAt(0).get()), nullptr);
+  EXPECT_NE(dynamic_cast<ParentRef*>(a->childAt(1).get()), nullptr);
+  EXPECT_NE(dynamic_cast<Formula*>(a->childAt(2).get()), nullptr);
 }
 
 // ── BaseObject / TreeItem integration ─────────────────────────────────────────

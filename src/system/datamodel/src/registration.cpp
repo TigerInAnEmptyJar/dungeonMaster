@@ -8,7 +8,6 @@
 #include <parentRef.hpp>
 #include <quadraticDerivationFormula.hpp>
 #include <scaledSumDerivationFormula.hpp>
-#include <secondaryAttribute.hpp>
 
 namespace gurps_system {
 
@@ -25,9 +24,6 @@ void registerSystemObjects(infrastructure::ObjectFactory& factory)
   factory.install(LookupFormula::classId(), [](boost::uuids::uuid id) {
     return std::make_shared<LookupFormula>(std::map<int, int>{{0, 0}}, id);
   });
-
-  factory.install(SecondaryAttribute::classId(),
-                  [](boost::uuids::uuid id) { return std::make_shared<SecondaryAttribute>(id); });
 
   factory.install(ParentRef::classId(),
                   [](boost::uuids::uuid id) { return std::make_shared<ParentRef>(id); });

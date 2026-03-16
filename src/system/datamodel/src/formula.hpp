@@ -24,6 +24,9 @@ class Formula : public infrastructure::TreeItem
 {
   Q_OBJECT
 
+  Q_PROPERTY(
+      int maxDirectBonus READ maxDirectBonus WRITE setMaxDirectBonus NOTIFY maxDirectBonusChanged)
+
 public:
   explicit Formula(boost::uuids::uuid objectId = boost::uuids::uuid{});
   ~Formula() override = default;
@@ -38,22 +41,38 @@ public:
   static auto classId() -> boost::uuids::uuid;
   // typeId() remains pure virtual — implemented by concrete subclasses
 
+  // ── Direct-bonus cap ────────────────────────────────────────────────────
+
+  /**
+   * \brief Maximum number of levels that may be bought via this formula (-1 = uncapped).
+   *
+   * The instance layer reads this value to clamp the purchased bonus before
+   * applying the formula.  A value of -1 (default) means no cap.
+   */
+  auto maxDirectBonus() const -> int;
+
+  /**
+   * \brief Sets the direct-bonus cap.
+   */
+  auto setMaxDirectBonus(int value) -> void;
+
   // ── Interface ───────────────────────────────────────────────────────────
 
   /**
    * \brief Returns the level bonus achieved by investing \p investedCp character points.
-   *
-   * A positive result means the item is raised above its base level.
    */
   virtual auto levelBonus(int investedCp) const -> int = 0;
 
   /**
    * \brief Returns the character point cost to achieve the given \p levelBonus.
-   *
-   * The inverse of \c levelBonus: \c cpCost(levelBonus(cp)) == cp for multiples
-   * of the cost quantum.
    */
   virtual auto cpCost(int levelBonus) const -> int = 0;
+
+Q_SIGNALS:
+  void maxDirectBonusChanged(int value);
+
+private:
+  int _maxDirectBonus{-1};
 };
 
 } // namespace gurps_system

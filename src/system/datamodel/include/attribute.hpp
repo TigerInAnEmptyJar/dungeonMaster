@@ -6,46 +6,37 @@
 
 namespace gurps_system {
 
+// Private types — consumers need the corresponding private headers to use
+// the values returned by the derivation accessors.
+class DerivationFormula;
+class Formula;
+class ParentRef;
+
 /**
- * \brief A GURPS attribute definition, such as Strength or Dexterity.
+ * \brief A GURPS attribute definition — primary or secondary.
  *
- * An Attribute is the handbook description of an attribute: its name,
- * description, and the formula that maps CP investment to level bonus.
- * It holds no per-character state.
+ * Stores the handbook description of an attribute: its name, description, and
+ * the formulas / derivation algorithm that define how its level is obtained.
+ * Holds no per-character state; all computation is the responsibility of the
+ * instance layer.
  *
- * Attributes must be heap-allocated and owned by a \c shared_ptr when a
- * formula child is inserted (because \c insertChild uses \c shared_from_this()).
- * Construct via \c std::make_shared and insert the formula child afterwards:
- * \code
- *   auto st = std::make_shared<Attribute>();
- *   st->insertChild(0, std::make_shared<LinearFormula>(10));
- *   int lvl = st->level(investedCp);
- * \endcode
- * The base level is always 10.  Negative CP investment produces values below 10.
+ * Child layout (all optional, distinguished at runtime by \c dynamic_cast):
+ *  1. \c DerivationFormula — algorithm descriptor for derived attributes.
+ *  2. N \c ParentRef       — one per input attribute that feeds the formula.
+ *  3. \c Formula           — CP-to-bonus curve for directly-bought levels.
+ *                            \c Formula::maxDirectBonus caps the purchase (-1 = uncapped).
  *
- * \throws std::logic_error from \c level() and \c cpForLevelBonus() when
- *         the formula child has not yet been added.
+ * Primary attributes (ST, DX, IQ, HT) have only the direct \c Formula.
+ * Secondary attributes (HP, Will, ...) additionally carry a \c DerivationFormula and
+ * one or more \c ParentRef children.
  *
- * Per-character state (invested CP, live level value) is held by
- * \c InstanceAttribute, which references an \c Attribute for recalculation
- * and documentation.
- *
- * The formula is an implementation detail: it is stored as the first tree
- * child of the Attribute and is not accessible through the public API.
+ * \note Objects must be heap-allocated via \c std::make_shared.
  */
 class Attribute : public gurps_system::BaseObject
 {
   Q_OBJECT
 
 public:
-  /**
-   * \brief Constructs an initially formula-free Attribute.
-   *
-   * The formula must be added as the first tree child (index 0) before
-   * calling \c level() or \c cpForLevelBonus().
-   *
-   * \param objectId  Optional stable identity; auto-generated when nil.
-   */
   explicit Attribute(boost::uuids::uuid objectId = boost::uuids::uuid{});
   ~Attribute() override;
 
@@ -59,28 +50,45 @@ public:
   static auto classId() -> boost::uuids::uuid;
   auto typeId() const -> boost::uuids::uuid override;
 
-  // ── Computed ──────────────────────────────────────────────────────────────
+  // ── Direct formula (CP → bonus) ───────────────────────────────────────────
 
   /**
-   * \brief Computes the effective level for a given CP investment.
-   *
-   * \param investedCp  Character points spent on this attribute.
-   *                    May be negative to reach levels below 10.
-   * \return            10 + formula.levelBonus(investedCp)
-   * \throws std::logic_error if no formula child has been added.
+   * \brief Appends a CP-to-bonus formula as the last child.
+   * \throws std::logic_error if a direct formula is already present.
    */
-  auto level(int investedCp) const -> int;
+  auto insertDirectFormula(std::shared_ptr<Formula> formula) -> void;
+
+  /** Returns \c true if a direct formula has been attached. */
+  auto hasDirectFormula() const -> bool;
 
   /**
-   * \brief CP cost to achieve the given level bonus, via the formula.
-   *
-   * \throws std::logic_error if no formula child has been added.
+   * \brief Returns the direct formula.
+   * \throws std::logic_error if no direct formula has been attached.
    */
-  auto cpForLevelBonus(int levelBonus) const -> int;
+  auto directFormula() const -> Formula const&;
 
-private:
-  struct Impl;
-  std::unique_ptr<Impl> _p;
+  // ── Derivation (secondary attributes) ────────────────────────────────────
+
+  /**
+   * \brief Inserts the derivation formula as child 0.
+   * \throws std::logic_error if a derivation formula is already present.
+   */
+  auto insertDerivationFormula(std::shared_ptr<DerivationFormula> formula) -> void;
+
+  /** Returns the derivation formula, or \c nullptr if absent. */
+  auto derivationFormula() const -> DerivationFormula*;
+
+  /** Appends a parent reference, inserted before any direct-formula child. */
+  auto addParent(std::shared_ptr<ParentRef> ref) -> void;
+
+  /** Returns the number of parent references. */
+  auto parentCount() const -> int;
+
+  /**
+   * \brief Returns the i-th parent reference.
+   * \throws std::out_of_range if \p i is out of bounds.
+   */
+  auto parentAt(int i) const -> ParentRef const&;
 };
 
 } // namespace gurps_system
