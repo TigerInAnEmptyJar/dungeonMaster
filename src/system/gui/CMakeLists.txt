@@ -30,4 +30,15 @@ if(BUILD_GUI_EXAMPLES)
         PRIVATE Qt6::Qml
         PRIVATE Qt6::Quick
     )
+    
+    my_add_executable(attributeAdminExample
+      AUTOMOC
+      SOURCE
+        examples/attributeAdminExample.cpp
+      DEPENDS
+        PRIVATE DM::System::Gui
+        PRIVATE Qt6::Qml
+        PRIVATE Qt6::Quick
+        PRIVATE Qt6::QuickControls2
+    )
 endif()

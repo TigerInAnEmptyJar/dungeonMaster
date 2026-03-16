@@ -17,6 +17,7 @@ my_add_qml_test(SystemGuiQmlTests
   QML_FILES
     tst_attributeListView.qml
     tst_attributeDetailView.qml
+    tst_attributeDetailViewEditable.qml
   DEPENDS
     DM::System::Gui
 )

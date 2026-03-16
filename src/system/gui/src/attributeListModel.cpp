@@ -140,4 +140,64 @@ void AttributeListModel::setContainer(infrastructure::TreeItem* container)
 
 auto AttributeListModel::container() const -> infrastructure::TreeItem* { return _p->container; }
 
+// ── Attribute management ──────────────────────────────────────────────────────
+
+gurps_system::Attribute* AttributeListModel::attributeAt(int row) const
+{
+  if (!_p->container || row < 0 || row >= _p->container->size()) {
+    return nullptr;
+  }
+
+  auto child = _p->container->childAt(row);
+  return dynamic_cast<gurps_system::Attribute*>(child.get());
+}
+
+int AttributeListModel::addAttribute(QString const& name, QString const& description)
+{
+  if (!_p->container) {
+    qWarning() << "AttributeListModel::addAttribute: Cannot add attribute (no container set)";
+    return -1;
+  }
+
+  // Create new attribute
+  auto newAttr = std::make_shared<gurps_system::Attribute>();
+  newAttr->setName(name);
+  newAttr->setDescription(description);
+
+  // Insert at the end
+  int newIndex = _p->container->size();
+  _p->container->insertChild(newIndex, newAttr);
+
+  // Connect signals for the new attribute
+  if (auto* baseObj = dynamic_cast<gurps_system::BaseObject*>(newAttr.get())) {
+    connect(baseObj, &gurps_system::BaseObject::nameChanged, this, [this, newIndex]() {
+      auto idx = index(newIndex, 0);
+      Q_EMIT dataChanged(idx, idx, {NameRole});
+    });
+
+    connect(baseObj, &gurps_system::BaseObject::descriptionChanged, this, [this, newIndex]() {
+      auto idx = index(newIndex, 0);
+      Q_EMIT dataChanged(idx, idx, {DescriptionRole});
+    });
+  }
+
+  return newIndex;
+}
+
+bool AttributeListModel::removeAttribute(int row)
+{
+  if (!_p->container || row < 0 || row >= _p->container->size()) {
+    qWarning() << "AttributeListModel::removeAttribute: Cannot remove attribute at row" << row;
+    return false;
+  }
+
+  auto child = _p->container->childAt(row);
+  if (!child) {
+    return false;
+  }
+
+  _p->container->removeChild(child);
+  return true;
+}
+
 } // namespace gurps_system::gui
