@@ -6,11 +6,16 @@
 #include <race.hpp>
 #include <skill.hpp>
 
+#include "attributeSkillPrerequisite.hpp"
+#include "compositePrerequisites.hpp"
 #include "linearFormula.hpp"
 #include "lookupDerivationFormula.hpp"
 #include "lookupFormula.hpp"
+#include "prerequisite.hpp"
 #include "quadraticDerivationFormula.hpp"
 #include "scaledSumDerivationFormula.hpp"
+#include "simplePrerequisites.hpp"
+#include "skillDefault.hpp"
 
 namespace gurps_system {
 
@@ -52,6 +57,27 @@ void registerSystemObjects(infrastructure::ObjectFactory& factory)
                   [](boost::uuids::uuid id) { return std::make_shared<Profession>(id); });
   factory.install(Skill::classId(),
                   [](boost::uuids::uuid id) { return std::make_shared<Skill>(id); });
+
+  // Skill defaults and prerequisites
+  factory.install(SkillDefault::classId(),
+                  [](boost::uuids::uuid id) { return std::make_shared<SkillDefault>(id); });
+  factory.install(AttributePrerequisite::classId(), [](boost::uuids::uuid id) {
+    return std::make_shared<AttributePrerequisite>(id);
+  });
+  factory.install(SkillPrerequisite::classId(),
+                  [](boost::uuids::uuid id) { return std::make_shared<SkillPrerequisite>(id); });
+  factory.install(AdvantagePrerequisite::classId(), [](boost::uuids::uuid id) {
+    return std::make_shared<AdvantagePrerequisite>(id);
+  });
+  factory.install(ProfessionPrerequisite::classId(), [](boost::uuids::uuid id) {
+    return std::make_shared<ProfessionPrerequisite>(id);
+  });
+  factory.install(RacePrerequisite::classId(),
+                  [](boost::uuids::uuid id) { return std::make_shared<RacePrerequisite>(id); });
+  factory.install(AndPrerequisite::classId(),
+                  [](boost::uuids::uuid id) { return std::make_shared<AndPrerequisite>(id); });
+  factory.install(OrPrerequisite::classId(),
+                  [](boost::uuids::uuid id) { return std::make_shared<OrPrerequisite>(id); });
 }
 
 auto formulaTypeToClassId(FormulaType type) -> boost::uuids::uuid

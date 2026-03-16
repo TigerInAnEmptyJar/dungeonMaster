@@ -78,7 +78,7 @@ TEST_F(RegistrationTest, ProfessionIsRegistered)
 
 TEST_F(RegistrationTest, SkillIsRegistered) { EXPECT_TRUE(factory.isInstalled(Skill::classId())); }
 
-TEST_F(RegistrationTest, AllTypesRegistered) { EXPECT_EQ(factory.installedCount(), 10); }
+TEST_F(RegistrationTest, AllTypesRegistered) { EXPECT_EQ(factory.installedCount(), 18); }
 
 // ── Factory creation ──────────────────────────────────────────────────────────
 
@@ -141,5 +141,5 @@ TEST_F(RegistrationTest, CreateLookupDerivationFormulaReturnsCorrectType)
 TEST_F(RegistrationTest, CallingRegisterTwiceDoesNotAddDuplicates)
 {
   registerSystemObjects(factory); // second call — install() returns false, no throw
-  EXPECT_EQ(factory.installedCount(), 10);
+  EXPECT_EQ(factory.installedCount(), 18);
 }

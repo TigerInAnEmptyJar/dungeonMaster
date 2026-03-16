@@ -24,6 +24,11 @@ my_add_library(systemDatamodel
     src/scaledSumDerivationFormula.hpp
     src/quadraticDerivationFormula.hpp
     src/lookupDerivationFormula.hpp
+    src/skillDefault.hpp
+    src/prerequisite.hpp
+    src/attributeSkillPrerequisite.hpp
+    src/simplePrerequisites.hpp
+    src/compositePrerequisites.hpp
   SOURCE
     src/baseObject.cpp
     src/formula.cpp
@@ -41,5 +46,10 @@ my_add_library(systemDatamodel
     src/race.cpp
     src/raceContainer.cpp
     src/skill.cpp
+    src/skillDefault.cpp
+    src/prerequisite.cpp
+    src/attributeSkillPrerequisite.cpp
+    src/simplePrerequisites.cpp
+    src/compositePrerequisites.cpp
   ALIAS DM::System::Datamodel
 )
