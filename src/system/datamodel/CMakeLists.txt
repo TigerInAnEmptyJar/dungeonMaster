@@ -16,6 +16,7 @@ my_add_library(systemDatamodel
     include/professionContainer.hpp
     include/race.hpp
     include/raceContainer.hpp
+    include/skill.hpp
     src/formula.hpp
     src/linearFormula.hpp
     src/lookupFormula.hpp
@@ -39,5 +40,6 @@ my_add_library(systemDatamodel
     src/professionContainer.cpp
     src/race.cpp
     src/raceContainer.cpp
+    src/skill.cpp
   ALIAS DM::System::Datamodel
 )

@@ -117,6 +117,13 @@ auto propCodecs() -> std::unordered_map<std::string, XmlPropCodec> const&
           }
           return QVariant::fromValue(list); // reader AT </property>
         }}},
+      {"gurps_system::Skill::SkillType",
+       {[](QXmlStreamWriter& xml, QVariant const& v) {
+          xml.writeCharacters(QString::number(v.toInt()));
+        },
+        [](QXmlStreamReader& xml) -> QVariant {
+          return xml.readElementText().toInt(); // leaves AT </property>
+        }}},
   };
   return kTable;
 }

@@ -106,6 +106,9 @@ auto propCodecs() -> std::unordered_map<std::string, PropCodec> const&
           }
           return QVariant::fromValue(list);
         }}},
+      {"gurps_system::Skill::SkillType",
+       {[](QVariant const& v) -> QJsonValue { return v.toInt(); },
+        [](QJsonValue const& j) -> QVariant { return j.toInt(); }}},
   };
   return kTable;
 }

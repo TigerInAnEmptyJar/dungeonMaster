@@ -3,6 +3,9 @@
 #include <attribute.hpp>
 #include <objectFactory.hpp>
 #include <parentRef.hpp>
+#include <profession.hpp>
+#include <race.hpp>
+#include <skill.hpp>
 
 #include <linearFormula.hpp>
 #include <lookupDerivationFormula.hpp>
@@ -66,7 +69,16 @@ TEST_F(RegistrationTest, LookupDerivationFormulaIsRegistered)
   EXPECT_TRUE(factory.isInstalled(LookupDerivationFormula::classId()));
 }
 
-TEST_F(RegistrationTest, AllTypesRegistered) { EXPECT_EQ(factory.installedCount(), 9); }
+TEST_F(RegistrationTest, RaceIsRegistered) { EXPECT_TRUE(factory.isInstalled(Race::classId())); }
+
+TEST_F(RegistrationTest, ProfessionIsRegistered)
+{
+  EXPECT_TRUE(factory.isInstalled(Profession::classId()));
+}
+
+TEST_F(RegistrationTest, SkillIsRegistered) { EXPECT_TRUE(factory.isInstalled(Skill::classId())); }
+
+TEST_F(RegistrationTest, AllTypesRegistered) { EXPECT_EQ(factory.installedCount(), 10); }
 
 // ── Factory creation ──────────────────────────────────────────────────────────
 
@@ -129,5 +141,5 @@ TEST_F(RegistrationTest, CreateLookupDerivationFormulaReturnsCorrectType)
 TEST_F(RegistrationTest, CallingRegisterTwiceDoesNotAddDuplicates)
 {
   registerSystemObjects(factory); // second call — install() returns false, no throw
-  EXPECT_EQ(factory.installedCount(), 9);
+  EXPECT_EQ(factory.installedCount(), 10);
 }

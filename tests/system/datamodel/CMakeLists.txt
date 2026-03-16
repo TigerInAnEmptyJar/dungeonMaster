@@ -11,4 +11,5 @@ my_add_test(SystemDatamodelTests
     attributeTest.cpp
     derivationFormulaTest.cpp
     registrationTest.cpp
+    skillTest.cpp
 )
