@@ -24,6 +24,10 @@ my_add_qml_test(SystemGuiQmlTests
     tst_attributeListView.qml
     tst_attributeDetailView.qml
     tst_attributeDetailViewEditable.qml
+    tst_raceListView.qml
+    tst_raceDetailView.qml
+    tst_professionListView.qml
+    tst_professionDetailView.qml
   DEPENDS
     DM::System::Gui
 )

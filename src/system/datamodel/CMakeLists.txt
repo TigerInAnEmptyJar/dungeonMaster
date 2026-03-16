@@ -12,11 +12,14 @@ my_add_library(systemDatamodel
     include/cpTable.hpp
     include/registration.hpp
     include/attributeContainer.hpp
+    include/profession.hpp
+    include/professionContainer.hpp
+    include/race.hpp
+    include/raceContainer.hpp
     src/formula.hpp
     src/linearFormula.hpp
     src/lookupFormula.hpp
     src/parentRef.hpp
-    src/derivationFormula.hpp
     src/scaledSumDerivationFormula.hpp
     src/quadraticDerivationFormula.hpp
     src/lookupDerivationFormula.hpp
@@ -27,11 +30,14 @@ my_add_library(systemDatamodel
     src/lookupFormula.cpp
     src/attribute.cpp
     src/parentRef.cpp
-    src/derivationFormula.cpp
     src/scaledSumDerivationFormula.cpp
     src/quadraticDerivationFormula.cpp
     src/lookupDerivationFormula.cpp
     src/registration.cpp
     src/attributeContainer.cpp
+    src/profession.cpp
+    src/professionContainer.cpp
+    src/race.cpp
+    src/raceContainer.cpp
   ALIAS DM::System::Datamodel
 )

@@ -10,8 +10,12 @@ my_add_library(systemGui
     PUBLIC DM::Infrastructure
   HEADER
     include/attributeListModel.hpp
+    include/raceListModel.hpp
+    include/professionListModel.hpp
   SOURCE
     src/attributeListModel.cpp
+    src/raceListModel.cpp
+    src/professionListModel.cpp
   RESOURCES
     qml.qrc
   ALIAS DM::System::Gui

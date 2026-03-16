@@ -4,6 +4,10 @@
         <file alias="AttributeListView.qml">qml/AttributeListView.qml</file>
         <file alias="AttributesMain.qml">qml/AttributesMain.qml</file>
         <file alias="AttributeManagementView.qml">qml/AttributeManagementView.qml</file>
+        <file alias="RaceDetailView.qml">qml/RaceDetailView.qml</file>
+        <file alias="RaceListView.qml">qml/RaceListView.qml</file>
+        <file alias="ProfessionDetailView.qml">qml/ProfessionDetailView.qml</file>
+        <file alias="ProfessionListView.qml">qml/ProfessionListView.qml</file>
         <file alias="LinearFormulaEditor.qml">qml/LinearFormulaEditor.qml</file>
         <file alias="LookupFormulaEditor.qml">qml/LookupFormulaEditor.qml</file>
         <file alias="ScaledSumDerivationFormulaEditor.qml">qml/ScaledSumDerivationFormulaEditor.qml</file>

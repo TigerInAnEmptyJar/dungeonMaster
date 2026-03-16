@@ -1,7 +1,9 @@
 #include <registration.hpp>
 
+#include "profession.hpp"
 #include <attribute.hpp>
 #include <parentRef.hpp>
+#include <race.hpp>
 
 #include "linearFormula.hpp"
 #include "lookupDerivationFormula.hpp"
@@ -42,6 +44,11 @@ void registerSystemObjects(infrastructure::ObjectFactory& factory)
   factory.install(LookupDerivationFormula::classId(), [](boost::uuids::uuid id) {
     return std::make_shared<LookupDerivationFormula>(std::map<int, int>{{0, 0}}, id);
   });
+
+  factory.install(Race::classId(),
+                  [](boost::uuids::uuid id) { return std::make_shared<Race>(id); });
+  factory.install(Profession::classId(),
+                  [](boost::uuids::uuid id) { return std::make_shared<Profession>(id); });
 }
 
 auto formulaTypeToClassId(FormulaType type) -> boost::uuids::uuid

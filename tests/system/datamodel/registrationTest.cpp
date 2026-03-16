@@ -66,7 +66,7 @@ TEST_F(RegistrationTest, LookupDerivationFormulaIsRegistered)
   EXPECT_TRUE(factory.isInstalled(LookupDerivationFormula::classId()));
 }
 
-TEST_F(RegistrationTest, AllTypesRegistered) { EXPECT_EQ(factory.installedCount(), 7); }
+TEST_F(RegistrationTest, AllTypesRegistered) { EXPECT_EQ(factory.installedCount(), 9); }
 
 // ── Factory creation ──────────────────────────────────────────────────────────
 
@@ -129,5 +129,5 @@ TEST_F(RegistrationTest, CreateLookupDerivationFormulaReturnsCorrectType)
 TEST_F(RegistrationTest, CallingRegisterTwiceDoesNotAddDuplicates)
 {
   registerSystemObjects(factory); // second call — install() returns false, no throw
-  EXPECT_EQ(factory.installedCount(), 7);
+  EXPECT_EQ(factory.installedCount(), 9);
 }
